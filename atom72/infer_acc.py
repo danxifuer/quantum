@@ -63,6 +63,6 @@ def handle_bar(context, bar_dict):
 def after_trading(context):
     print('========== over ==========')
 
-# rqalpha run -s 2017-09-10 -e 2017-09-25 -f /home/daiab/machine_disk/code/Craft/rnn/stable/infer_acc.py  --account stock 100000 -bm 000001.XSHE
-
+# export PYTHONPATH=/home/daiab/machine_disk/code/quantum/atom72:$PATHONPATH
+# rqalpha run -s 2017-09-12 -e 2017-10-5 -f /home/daiab/machine_disk/code/quantum/atom72/infer_acc.py  --account stock 100000 -bm 000001.XSHE
 

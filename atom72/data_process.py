@@ -4,7 +4,6 @@ import random
 from rnn_config import *
 
 
-
 def _norm_zscore(data):
     mean = np.mean(data[:, :4])
     std = np.std(data[:, :4])
