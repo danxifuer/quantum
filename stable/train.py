@@ -1,19 +1,23 @@
 from data_process import get_data_iter
 import tensorflow as tf
-from rnn_config import EPOCH, BATCH_SIZE, PREDICT_LEN, SEQ_LEN, INPUT_SIZE
+from rnn_config import EPOCH, BATCH_SIZE, PREDICT_LEN, SEQ_LEN, INPUT_SIZE, RESTORE_PATH
 from model import get_model
-
+import os
 
 data_p = tf.placeholder(dtype=tf.float32, shape=(BATCH_SIZE, SEQ_LEN, INPUT_SIZE))
 label_p = tf.placeholder(dtype=tf.int64, shape=(BATCH_SIZE, PREDICT_LEN))
 update, loss, acc, lr = get_model(data_p, label_p)
 data_iter = get_data_iter()
+path = os.path.dirname(RESTORE_PATH)
+if not os.path.exists(path):
+    os.makedirs(path)
 
 iter_num = 0
 with tf.Session() as sess:
     saver = tf.train.Saver()
-    epoch = 0
     sess.run(tf.global_variables_initializer())
+    # saver.restore(sess, RESTORE_PATH)
+    epoch = 0
     total_loss = 0
     total_acc = 0
     while True:
@@ -23,8 +27,8 @@ with tf.Session() as sess:
             data_iter.reset()
             epoch += 1
             print('epoch == %d' % epoch)
+            saver.save(sess, save_path=RESTORE_PATH)
             if epoch > EPOCH:
-                saver.save(sess, save_path='/home/daiab/machine_disk/code/Craft/save_model/model')
                 break
             batch_data, batch_label = data_iter.next()
         _, loss_value, acc_value, lr_value = sess.run([update, loss, acc, lr],
@@ -34,9 +38,8 @@ with tf.Session() as sess:
         total_acc += acc_value
         if iter_num % 20 == 0:
             print('{}#{}; loss: {}; acc: {}; lr: {}'.format(epoch,
-                                                          iter_num, total_loss / 20,
-                                                          total_acc / (20 * BATCH_SIZE * PREDICT_LEN),
-                                                          lr_value))
+                                                            iter_num, total_loss / 20,
+                                                            total_acc / (20 * BATCH_SIZE * PREDICT_LEN),
+                                                            lr_value))
             total_acc = total_loss = 0
         iter_num += 1
-

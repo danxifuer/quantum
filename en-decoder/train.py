@@ -16,6 +16,7 @@ if not os.path.exists(path):
 iter_num = 0
 with tf.Session() as sess:
     saver = tf.train.Saver()
+    # saver.restore(sess, RESTORE_PATH)
     epoch = 0
     sess.run(tf.global_variables_initializer())
     total_loss = 0

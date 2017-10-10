@@ -21,9 +21,6 @@ class Infer:
         self._sess = tf.Session()
         saver = tf.train.Saver()
         saver.restore(self._sess, restore_path)
-        # print(tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES))
-        # print(self._sess.run('fully_connected_1/biases:0'))
-        # exit()
 
     def step(self, data):
         output = self._sess.run(self._graph, feed_dict={self._placeholder: data})
@@ -50,14 +47,11 @@ def before_trading(context):
         data = np.array([data])
         softmax_output = context.infer_mode.step(data[:, :-1, :])
         up = np.argmax(softmax_output, axis=1)[-1]
-        if softmax_output[-1][0] > 0.6 or softmax_output[-1][0] < 0.4:
+        if softmax_output[-1][0] > 0.95 or softmax_output[-1][0] < 0.05:
             context.total_count += 1
             if up == int(data[0, -1, 1] / data[0, -2, 1] > 1):
                 context.right += 1
-    if context.total_count == 0:
-        print('total count == 0')
-    else:
-        print('base == %s, right ratio == %s' % (context.total_count, context.right / context.total_count))
+    print('base == %s, right ratio == %s' % (context.total_count, context.right / context.total_count))
     context.total_count = 0
     context.right = 0
 
