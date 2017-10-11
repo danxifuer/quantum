@@ -1,0 +1,3 @@
+train acc:
+在atom72的基础上将fc的relu设置为了None
+通过前25个数据预测后10个数据

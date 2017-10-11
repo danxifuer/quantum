@@ -6,12 +6,11 @@ from data_process import _norm_max_min
 from rqalpha.api.api_base import all_instruments, history_bars
 from rqalpha.api import order_shares
 import logging
-
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
                     datefmt='%a, %d %b %Y %H:%M:%S')
-# filename='parser_result.log',
-# filemode='w')
+                    # filename='parser_result.log',
+                    # filemode='w')
 
 
 class Infer:
@@ -21,21 +20,20 @@ class Infer:
         self._sess = tf.Session()
         saver = tf.train.Saver()
         saver.restore(self._sess, restore_path)
-        # print(tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES))
-        # print(self._sess.run('fully_connected_1/biases:0'))
-        # exit()
 
     def step(self, data):
         output = self._sess.run(self._graph, feed_dict={self._placeholder: data})
         return output
 
 
+def cal_acc():
+    pass
+
+
 def init(context):
     # 在context中保存全局变量
     context.all_code = all_instruments('CS').order_book_id.values
     context.infer_mode = Infer(RESTORE_PATH)
-    context.right = 0
-    context.total_count = 0
 
 
 def before_trading(context):
@@ -43,32 +41,33 @@ def before_trading(context):
     context.bi = []
     for code in context.all_code:
         # prices = history_bars(context.s1, context.LONGPERIOD + 1, '1d', 'close')
-        data = history_bars(code, bar_count=SEQ_LEN + 1, frequency='1d', fields=fields)
-        if data.shape[0] < SEQ_LEN + 1:
-            continue
+        data = history_bars(code, bar_count=SEQ_LEN, frequency='1d', fields=fields)
         data = _norm_max_min(np.array(data.tolist(), subok=True))
         data = np.array([data])
-        softmax_output = context.infer_mode.step(data[:, :-1, :])
+        if len(data.shape) < 3 or data.shape[1] < SEQ_LEN:
+            continue
+        softmax_output = context.infer_mode.step(data)
         up = np.argmax(softmax_output, axis=1)[-1]
-        if softmax_output[-1][0] > 0.95 or softmax_output[-1][0] < 0.05:
-            context.total_count += 1
-            if up == int(data[0, -1, 1] / data[0, -2, 1] > 1):
-                context.right += 1
-    if context.total_count == 0:
-        print('total count == 0')
-    else:
-        print('base == %s, right ratio == %s' % (context.total_count, context.right / context.total_count))
-    context.total_count = 0
-    context.right = 0
+        if up and softmax_output[-1][1] > 0.9:
+            context.bi.append(code)
+    print('bi size == %d' % len(context.bi))
 
 
 def handle_bar(context, bar_dict):
-    pass
+    num = len(context.bi)
+    print('filter num = %d' % num)
+    for code in context.all_code:
+        position = context.portfolio.positions.get(code, None)
+        if position and position.quantity > 0:
+            order_shares(code, - position.quantity)
+        if code in context.bi:
+            shares = context.portfolio.cash / bar_dict[code].close / num
+            print(int(shares))
+            order_shares(code, int(shares))
 
 
 def after_trading(context):
     print('========== over ==========')
 
-# rqalpha run -s 2017-09-12 -e 2017-10-05 -f /home/daiab/machine_disk/code/quantum/stable/infer_acc.py  --account stock 100000 -bm 000001.XSHE
 
-
+# rqalpha run -s 2016-01-01 -e 2016-02-01 -f /home/daiab/machine_disk/code/Craft/rnn/atom72/infer.py  --account stock 100000 -p -bm 000001.XSHE
