@@ -35,7 +35,7 @@ def _gradient_clip(gradients, max_gradient_norm):
 
 
 def get_model(batch_data, batch_label, is_train=True):
-    print('batch_label shape: %s' % batch_label.get_shape())
+    # print('batch_label shape: %s' % batch_label.get_shape())
     cell_list = []
     for i in range(NUM_LAYERS):
         residual_connection = i >= NUM_LAYERS - NUM_RESIDUAL_LAYERS
@@ -45,6 +45,9 @@ def get_model(batch_data, batch_label, is_train=True):
     encoder_cell = tf.contrib.rnn.MultiRNNCell(cell_list)
     # ######## encoder #########
     encoder_input, decoder_input = tf.split(batch_data, [SEQ_LEN - PREDICT_LEN, PREDICT_LEN], axis=1)
+    # batch_data = fully_connected(batch_data,
+    #                              num_outputs=INPUT_FC_NUM_OUPUT,
+    #                              activation_fn=None)
     print('encoder_input shape: %s, decoder_input shape: %s' % (encoder_input.get_shape(),
                                                                 decoder_input.get_shape()))
     encoder_outputs, encoder_state = tf.nn.dynamic_rnn(encoder_cell,
@@ -60,9 +63,14 @@ def get_model(batch_data, batch_label, is_train=True):
                                       CELL_TYPE,
                                       residual_connection=residual_connection))
     decoder_cell = tf.contrib.rnn.MultiRNNCell(cell_list)
-    helper = seq2seq.TrainingHelper(decoder_input,
-                                    [BATCH_SIZE, PREDICT_LEN],
-                                    time_major=False)
+    if is_train:
+        helper = seq2seq.TrainingHelper(decoder_input,
+                                        [PREDICT_LEN for _ in range(BATCH_SIZE)],
+                                        time_major=False)
+    else:
+        helper = seq2seq.TrainingHelper(decoder_input,
+                                        [PREDICT_LEN],
+                                        time_major=False)
 
     decoder = seq2seq.BasicDecoder(decoder_cell,
                                    helper,
@@ -108,7 +116,7 @@ def get_model(batch_data, batch_label, is_train=True):
                                    end_learning_rate=END_LR,
                                    decay_steps=DECAY_STEP,
                                    power=0.5)
-    opt = tf.train.GradientDescentOptimizer(lr)
+    opt = tf.train.MomentumOptimizer(lr, momentum=0.9)
     # opt = tf.train.AdamOptimizer(lr)
     update = opt.apply_gradients(zip(clipped_gradients, trainable_vars), global_step=global_step)
     return update, loss, acc, lr

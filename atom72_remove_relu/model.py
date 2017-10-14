@@ -67,9 +67,12 @@ def get_model(batch_data, batch_label, is_train=True):
     # cross_entropy = tf.reduce_sum(cross_entropy, axis=1)
     # print('cross_entropy shape: %s' % cross_entropy.shape)
     acc = tf.reduce_sum(tf.cast(tf.equal(tf.argmax(logits, axis=1), reshaped_label), tf.int64))
+    # cross_entropy = tf.nn.softmax_cross_entropy_with_logits(
+    #     labels=tf.multiply(one_hot_label, np.array([[0.97, 1.0]])),
+    #     logits=logits)
     cross_entropy = tf.nn.softmax_cross_entropy_with_logits(
-        labels=tf.multiply(one_hot_label, np.array([[1.0, 0.95]])),
-        logits=logits)
+        labels=one_hot_label,
+        logits=tf.multiply(logits, np.array([[1.0, 0.95]])))
     # cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=one_hot_label,
     #                                                         logits=logits)
     # ce_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=reshaped_label, logits=logits)
@@ -78,7 +81,7 @@ def get_model(batch_data, batch_label, is_train=True):
 
     trainable_vars = tf.trainable_variables()
     gradients = tf.gradients(loss, trainable_vars)  # ,
-    clipped_gradients = _gradient_clip(gradients, max_gradient_norm=1.0)
+    clipped_gradients = _gradient_clip(gradients, max_gradient_norm=5.0)
     global_step = tf.Variable(0, trainable=False)
     warm_up_factor = 0.9
     warm_up_steps = 200

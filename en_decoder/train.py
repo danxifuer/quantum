@@ -27,9 +27,10 @@ with tf.Session() as sess:
             data_iter.reset()
             epoch += 1
             print('epoch == %d' % epoch)
-            if epoch >= (EPOCH / 2):
+            if epoch >= 5:
+                print('save')
                 saver.save(sess, save_path=RESTORE_PATH)
-            if epoch > EPOCH:
+            if epoch >= EPOCH:
                 break
             batch_data, batch_label = data_iter.next()
         _, loss_value, acc_value, lr_value = sess.run([update, loss, acc, lr],

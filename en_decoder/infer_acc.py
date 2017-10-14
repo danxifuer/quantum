@@ -4,7 +4,9 @@ from rnn_config import *
 from model import get_model
 from data_process import _norm_max_min
 from rqalpha.api.api_base import all_instruments, history_bars
-from rqalpha.api import order_shares
+# from rqalpha.api import order_shares
+from tensorflow.python.framework import ops
+from tensorflow.contrib.seq2seq.python.ops.helper import Helper
 import logging
 
 logging.basicConfig(level=logging.DEBUG,
@@ -14,6 +16,56 @@ logging.basicConfig(level=logging.DEBUG,
 
 # filename='parser_result.log',
 # filemode='w')
+
+class GreedyEmbeddingHelper(Helper):
+    def __init__(self, embedding, start_tokens, end_token):
+        if callable(embedding):
+            self._embedding_fn = embedding
+        else:
+            self._embedding_fn = (
+                lambda ids: embedding_ops.embedding_lookup(embedding, ids))
+
+        self._start_tokens = ops.convert_to_tensor(
+            start_tokens, dtype=tf.int32, name="start_tokens")
+        self._end_token = ops.convert_to_tensor(
+            end_token, dtype=tf.int32, name="end_token")
+        if self._start_tokens.get_shape().ndims != 1:
+            raise ValueError("start_tokens must be a vector")
+        self._batch_size = tf.size(start_tokens)
+        if self._end_token.get_shape().ndims != 0:
+            raise ValueError("end_token must be a scalar")
+        self._start_inputs = self._embedding_fn(self._start_tokens)
+
+    @property
+    def batch_size(self):
+        return self._batch_size
+
+    def initialize(self, name=None):
+        finished = tf.tile([False], [self._batch_size])
+        return (finished, self._start_inputs)
+
+    def sample(self, time, outputs, state, name=None):
+        """sample for GreedyEmbeddingHelper."""
+        del time, state  # unused by sample_fn
+        # Outputs are logits, use argmax to get the most probable id
+        if not isinstance(outputs, ops.Tensor):
+            raise TypeError("Expected outputs to be a single Tensor, got: %s" %
+                            type(outputs))
+        sample_ids = tf.cast(
+            tf.argmax(outputs, axis=-1), tf.int32)
+        return sample_ids
+
+    def next_inputs(self, time, outputs, state, sample_ids, name=None):
+        """next_inputs_fn for GreedyEmbeddingHelper."""
+        del time, outputs  # unused by next_inputs_fn
+        finished = tf.equal(sample_ids, self._end_token)
+        all_finished = tf.reduce_all(finished)
+        next_inputs = tf.cond(
+            all_finished,
+            # If we're finished, the next_inputs value doesn't matter
+            lambda: self._start_inputs,
+            lambda: self._embedding_fn(sample_ids))
+        return (finished, next_inputs, state)
 
 
 class Infer:
@@ -26,6 +78,7 @@ class Infer:
 
     def step(self, data):
         output = self._sess.run(self._graph, feed_dict={self._placeholder: data})
+        print(output.shape)
         return output
 
 

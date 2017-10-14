@@ -63,16 +63,13 @@ def get_model(batch_data, batch_label, is_train=True):
     reshaped_label = tf.reshape(batch_label, shape=(-1,))
     one_hot_label = tf.one_hot(reshaped_label, depth=2)
     print('one_hot_label shape: %s' % one_hot_label.shape)
-    # softmax = tf.nn.softmax(logits)
-    # print('softmax shape: %s' % softmax.shape)
-    # cross_entropy = tf.multiply(tf.multiply(one_hot_label, softmax), np.array([[1.0, 1.1]]))
-    # cross_entropy = tf.multiply(one_hot_label, softmax)
-    # cross_entropy = tf.reduce_sum(cross_entropy, axis=1)
-    # print('cross_entropy shape: %s' % cross_entropy.shape)
     acc = tf.reduce_sum(tf.cast(tf.equal(tf.argmax(logits, axis=1), reshaped_label), tf.int64))
     cross_entropy = tf.nn.softmax_cross_entropy_with_logits(
         labels=tf.multiply(one_hot_label, np.array([[1.0, 0.95]])),
         logits=logits)
+    # cross_entropy = tf.nn.softmax_cross_entropy_with_logits(
+    #     labels=one_hot_label,
+    #     logits=tf.multiply(logits, np.array([[0.95, 1.0]])))
     # cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=one_hot_label,
     #                                                         logits=logits)
     # ce_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=reshaped_label, logits=logits)
@@ -96,7 +93,7 @@ def get_model(batch_data, batch_label, is_train=True):
                                    end_learning_rate=END_LR,
                                    decay_steps=DECAY_STEP,
                                    power=0.5)
-    opt = tf.train.MomentumOptimizer(lr, 0.9)
+    opt = tf.train.MomentumOptimizer(lr, 0.99)
     # opt = tf.train.AdamOptimizer(lr)
     update = opt.apply_gradients(zip(clipped_gradients, trainable_vars), global_step=global_step)
     return update, loss, acc, lr

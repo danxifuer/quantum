@@ -36,6 +36,7 @@ def init(context):
 
 
 def before_trading(context):
+    print('~~~~~~~~~~~~~~~~~~~~~~~~~~%s~~~~~~~~~~~~~~~~~~~~~~~~~~~' % context.now)
     fields = ["open", "close", "high", "low", "total_turnover", "volume"]
     context.bi = []
     filter_prob = []
@@ -43,18 +44,20 @@ def before_trading(context):
         data = history_bars(code, bar_count=SEQ_LEN + 1, frequency='1d', fields=fields)
         if data.shape[0] < SEQ_LEN + 1:
             continue
-        data = _norm_max_min(np.array(data.tolist(), subok=True))
-        data = np.array([data])
-        softmax_output = context.infer_mode.step(data[:, :-1, :])
-        real = int(data[0, -1, 1] / data[0, -2, 1] > 1)
+        data = np.array(data.tolist(), subok=True)
+        # print(data[-1, 1])
+        norm_data = _norm_max_min(data, copy=True)
+        norm_data = np.array([norm_data])
+        softmax_output = context.infer_mode.step(norm_data[:, :-1, :])
+        up_ratio = data[-1, 1] / data[-2, 1]
+        real = int(up_ratio > 1)
         if softmax_output[-1][1] > 0.95:  # up
-            filter_prob.append((softmax_output[-1][1], 1, real))
+            filter_prob.append((softmax_output[-1][1], 1, real, (up_ratio, data[-1, 1], code.split('.')[0])))
         elif softmax_output[-1][0] > 0.95:  # down
-            filter_prob.append((softmax_output[-1][0], 0, real))
+            filter_prob.append((softmax_output[-1][0], 0, real, (up_ratio, data[-1, 1], code.split('.')[0])))
     filter_prob = sorted(filter_prob, key=lambda x: -x[0])
     if len(filter_prob) > 10:
         filter_prob = filter_prob[:10]
-    # print(filter_prob)
     up_right = 0
     up_total = 0
     down_right = 0
@@ -71,11 +74,12 @@ def before_trading(context):
     if down_total == 0 or up_total == 0:
         print('error and passed, down_total: %s, up_total: %s' % (down_total, up_total))
         return
-    print('#%s; up == (%s, %s) down == (%s, %s)' % (context.now,
-                                                    up_total,
-                                                    up_right / up_total,
-                                                    down_total,
-                                                    down_right / down_total))
+    print('## up == (%s, %s) down == (%s, %s)' % (up_total,
+                                                  up_right / up_total,
+                                                  down_total,
+                                                  down_right / down_total))
+    for i in filter_prob:
+        print(i)
 
 
 def handle_bar(context, bar_dict):
@@ -85,9 +89,7 @@ def handle_bar(context, bar_dict):
 def after_trading(context):
     pass
 
-
 # export PYTHONPATH=/home/daiab/machine_disk/code/quantum/atom72:$PATHONPATH
 # rqalpha run -s 2017-09-12 -e 2017-10-5 -f
 # /home/daiab/machine_disk/code/quantum/atom72/infer_acc.py
 # --account stock 100000 -bm 000001.XSHE
-

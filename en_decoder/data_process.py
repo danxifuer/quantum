@@ -19,7 +19,9 @@ def _norm_zscore(data):
     return data
 
 
-def _norm_max_min(data):
+def _norm_max_min(data, copy=False):
+    if copy:
+        data = data.copy()
     min_value = np.min(data[:, :4])
     max_value = np.max(data[:, :4])
     if (max_value - min_value) < 1e-7:
