@@ -51,10 +51,10 @@ def before_trading(context):
         softmax_output = context.infer_mode.step(norm_data[:, :-1, :])
         up_ratio = data[-1, 1] / data[-2, 1]
         real = int(up_ratio > 1)
-        if softmax_output[-1][1] > 0.95:  # up
+        if softmax_output[-1][1] > 0.8:  # up
             filter_prob.append((softmax_output[-1][1], 1, real, (up_ratio, data[-1, 1], code.split('.')[0])))
-        elif softmax_output[-1][0] > 0.95:  # down
-            filter_prob.append((softmax_output[-1][0], 0, real, (up_ratio, data[-1, 1], code.split('.')[0])))
+        elif softmax_output[-1][2] > 0.8:  # down
+            filter_prob.append((softmax_output[-1][2], 0, real, (up_ratio, data[-1, 1], code.split('.')[0])))
     filter_prob = sorted(filter_prob, key=lambda x: -x[0])
     if len(filter_prob) > 10:
         filter_prob = filter_prob[:10]

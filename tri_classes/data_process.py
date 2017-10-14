@@ -97,7 +97,9 @@ class DataIter:
             norm_data = _norm_max_min(d[:-1, :])
             if norm_data is not None:
                 data.append(norm_data)
-                self.label.append(np.where(up_or_down > 1, 1, 0))
+                up = np.where(up_or_down >= 1.009, 1, 0)
+                down = np.where(up_or_down <= 0.993, 2, 0)
+                self.label.append(up+down)
         self.data = data
 
     def next(self):
@@ -107,7 +109,8 @@ class DataIter:
         data = self.data[self.curr_idx:self.curr_idx + self.batch_size]
         label = self.label[self.curr_idx:self.curr_idx + self.batch_size]
         self.curr_idx += self.batch_size
-        return np.array(data), np.array(label)
+        data = np.array(data)
+        return data + np.random.randn(*data.shape) * 0.005, np.array(label)
 
 
 def get_data_iter():

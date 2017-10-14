@@ -42,6 +42,9 @@ def get_model(batch_data, batch_label, is_train=True):
                                       CELL_TYPE,
                                       residual_connection=residual_connection))
     multi_cell = tf.contrib.rnn.MultiRNNCell(cell_list)
+    batch_data = fully_connected(batch_data,
+                                 num_outputs=INPUT_FC_NUM_OUPUT,
+                                 activation_fn=None)
     encoder_outputs, encoder_state = tf.nn.dynamic_rnn(multi_cell,
                                                        inputs=batch_data,
                                                        dtype=tf.float32,
@@ -70,11 +73,11 @@ def get_model(batch_data, batch_label, is_train=True):
     # cross_entropy = tf.nn.softmax_cross_entropy_with_logits(
     #     labels=tf.multiply(one_hot_label, np.array([[0.97, 1.0]])),
     #     logits=logits)
-    cross_entropy = tf.nn.softmax_cross_entropy_with_logits(
-        labels=one_hot_label,
-        logits=tf.multiply(logits, np.array([[1.0, 0.95]])))
-    # cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=one_hot_label,
-    #                                                         logits=logits)
+    # cross_entropy = tf.nn.softmax_cross_entropy_with_logits(
+    #     labels=one_hot_label,
+    #     logits=tf.multiply(logits, np.array([[1.0, 0.95]])))
+    cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=one_hot_label,
+                                                            logits=logits)
     # ce_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=reshaped_label, logits=logits)
     # print('ce_loss shape: %s' % ce_loss.shape)
     loss = tf.reduce_mean(cross_entropy)
