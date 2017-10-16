@@ -30,9 +30,11 @@ class Infer:
 def init(context):
     # 在context中保存全局变量
     context.all_code = all_instruments('CS').order_book_id.values
+    print(context.all_code[:10])
     context.infer_mode = Infer(RESTORE_PATH)
     context.right = 0
     context.total_count = 0
+    exit()
 
 
 def before_trading(context):
