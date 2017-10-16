@@ -3,7 +3,7 @@ import pickle
 import random
 from rnn_config import *
 
-
+# ["open", "close", "high", "low", "volume"]
 def _norm_zscore(data):
     mean = np.mean(data[:, :4])
     std = np.std(data[:, :4])
@@ -11,17 +11,23 @@ def _norm_zscore(data):
     mean = np.mean(data[:, 4:], axis=0, keepdims=True)
     std = np.std(data[:, 4:], axis=0, keepdims=True)
     data[:, 4:] = (data[:, 4:] - mean) / std
-    # if np.any(data > 20):
-    #     print(data)
-    #     exit()
-    # if np.min(data) < -5.0:
-    #     print(np.min(data))
     return data
 
 
-def _norm_max_min(data, copy=False):
-    if copy:
-        data = data.copy()
+def filter_remove_up_stop(data):
+    if np.any(data[:, 2] == data[:, 3]):
+        return True
+    return False
+
+
+def filter_nan(data):
+    if np.any(np.isnan(data)):
+        return True
+    return False
+
+
+def _norm_max_min(data):
+    data = data.copy()
     min_value = np.min(data[:, :4])
     max_value = np.max(data[:, :4])
     if (max_value - min_value) < 1e-7:
@@ -86,12 +92,12 @@ class DataIter:
         data = []
         for i in range(self.all_sample_size):
             d = self.data[i]
-            if np.any(np.isnan(d)):
-                print('data here have nan')
+            if filter_remove_up_stop(d):
+                continue
+            if filter_nan(d):
                 continue
             up_or_down = d[1:, IDX] / d[:-1, IDX]
-            if np.any(np.isnan(up_or_down)):
-                print('here have nan')
+            if filter_nan(up_or_down):
                 continue
             up_or_down = up_or_down[-self.predict_len:]
             norm_data = _norm_max_min(d[:-1, :])
@@ -109,6 +115,7 @@ class DataIter:
         self.curr_idx += self.batch_size
         data = np.array(data)
         return data + np.random.randn(*data.shape) * 0.005, np.array(label)
+
 
 def get_data_iter():
     origin_data = pickle.load(open(DATA_PATH, 'rb'))
