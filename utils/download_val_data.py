@@ -1,42 +1,39 @@
 from rqalpha.data.base_data_source import BaseDataSource
 from rqalpha.data.data_proxy import DataProxy
-from data_process import _norm_max_min
+# from data_process import _norm_max_min
 import datetime
 import numpy as np
-import tushare as ts
 import pickle
 
-PREDICT_LEN = 25
-END_DATE = datetime.date(2017, 10, 10)
+END_DATE = datetime.date(2017, 10, 15)
 
 
-def get_data_from_rq(code, end_date, bar_count=20):
-    data_source = BaseDataSource('/home/daiab/.rqalpha/bundle')
-    data_proxy = DataProxy(data_source)
-    # fields = ["open", "close", "high", "low", "total_turnover", "volume"]
-    fields = ["open", "close", "high", "low", "volume"]
-    data = data_proxy.history_bars(code,
-                                   bar_count=bar_count,
-                                   frequency='1d',
-                                   field=fields,
-                                   dt=end_date)
-    print(data)
-    return np.array(data.tolist())
+class RQData:
+    def __init__(self, end_date, bar_count=20):
+        data_source = BaseDataSource('/home/daiab/.rqalpha/bundle')
+        self._data_proxy = DataProxy(data_source)
+        self.fields = ["open", "close", "high", "low", "volume"]
+        self.end_date = end_date
+        self.bar_count = bar_count
+
+    def get_data(self, code):
+        data = self._data_proxy.history_bars(code,
+                                             bar_count=self.bar_count,
+                                             frequency='1d',
+                                             field=self.fields,
+                                             dt=self.end_date)
+        return np.array(data.tolist())
 
 
-all_code = ts.get_stock_basics()
+fi = open('/home/daiab/machine_disk/code/quantum/utils/all_code')
+all_code = fi.readline().strip().split(',')
+print('all_code length == %s' % len(all_code))
 all_val_data = []
-for code in all_code.index.values:
-    np_data = get_data_from_rq(code, end_date=END_DATE, bar_count=40)
-    if np_data.shape[0] < PREDICT_LEN + 1:
-        print('data miss')
-        continue
-    for i in range(0, np_data.shape[0] - PREDICT_LEN - 1, 1):
-        sample = np_data[i: i + PREDICT_LEN]
-        norm_data = _norm_max_min(sample, copy=True)
-        norm_data = np.array([norm_data])
-        up_ratio = np_data[i + PREDICT_LEN, 1] / np_data[i + PREDICT_LEN - 1, 1]
-        real = int(up_ratio > 1)
-        all_val_data.append((norm_data, real))
-
-pickle.dump(all_val_data, open('./val_data.pkl', 'wb'))
+rqdata = RQData(END_DATE, bar_count=40)
+for i, code in enumerate(all_code):
+    np_data = rqdata.get_data(code)
+    all_val_data.append(np_data)
+    if i % 20 == 0:
+        print(i)
+pickle.dump(all_val_data, file=open('./val_data.pkl', 'wb'))
+print('all val data == %s ' % len(all_val_data))

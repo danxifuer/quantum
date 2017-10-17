@@ -1,15 +1,64 @@
-from data_process import get_data_iter
+from data_process import get_train_data_iter, get_infer_data_iter
 import tensorflow as tf
 from rnn_config import EPOCH, BATCH_SIZE, PREDICT_LEN, SEQ_LEN, INPUT_SIZE, RESTORE_PATH
 from model import get_model
 
-data_p = tf.placeholder(dtype=tf.float32, shape=(BATCH_SIZE, SEQ_LEN, INPUT_SIZE))
-label_p = tf.placeholder(dtype=tf.int64, shape=(BATCH_SIZE, PREDICT_LEN))
-update, loss, acc, lr = get_model(data_p, label_p)
-data_iter = get_data_iter()
+
+class Infer:
+    def __init__(self):
+        self.data_iter = get_infer_data_iter()
+
+    def validate(self, sess, softmax_op):
+        filter_prob = []
+        while True:
+            try:
+                data, label = self.data_iter.next()
+                softmax_output = sess.run(softmax_op, feed_dict={data_p: data})
+                real = label[-1][-1]
+                # print(real)
+                if softmax_output[-1][1] > 0.95:  # up
+                    filter_prob.append((softmax_output[-1][1], 1, real))
+                elif softmax_output[-1][0] > 0.95:  # down
+                    filter_prob.append((softmax_output[-1][0], 0, real))
+            except StopIteration:
+                self.data_iter.reset()
+                filter_prob = sorted(filter_prob, key=lambda x: -x[0])
+                if len(filter_prob) > 20:
+                    filter_prob = filter_prob[:20]
+                up_right = 0
+                up_total = 0
+                down_right = 0
+                down_total = 0
+                for item in filter_prob:
+                    if item[1] == 1:
+                        if item[1] == item[2]:
+                            up_right += 1
+                        up_total += 1
+                    else:
+                        if item[1] == item[2]:
+                            down_right += 1
+                        down_total += 1
+                if down_total == 0 or up_total == 0:
+                    print('error and passed, down_total: %s, up_total: %s' % (down_total, up_total))
+                    return
+                print('## up == (%s, %s) down == (%s, %s)' % (up_total,
+                                                              up_right / up_total,
+                                                              down_total,
+                                                              down_right / down_total))
+                break
+
+
+data_p = tf.placeholder(dtype=tf.float32, shape=(None, SEQ_LEN, INPUT_SIZE))
+label_p = tf.placeholder(dtype=tf.int64, shape=(None, PREDICT_LEN))
+update, loss, acc, lr, softmax_op = get_model(data_p, label_p)
+data_iter = get_train_data_iter()
 
 iter_num = 0
-LOG_RATE = 20
+LOG_RATE = 40
+
+infer_class = Infer()
+
+
 with tf.Session() as sess:
     saver = tf.train.Saver()
     epoch = 0
@@ -21,6 +70,7 @@ with tf.Session() as sess:
         try:
             batch_data, batch_label = data_iter.next()
         except StopIteration:
+            infer_class.validate(sess, softmax_op)
             data_iter.reset()
             epoch += 1
             print('epoch == %d' % epoch)

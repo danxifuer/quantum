@@ -12,12 +12,12 @@ def dataframe2pickle(root_path, save_file, shift=0):
         tmp = tmp[f[:f.rfind('.')]]
         # avoid the affect by list on trade market
         tmp = tmp[fields][shift:]
-        print(tmp)
-        exit()
-        all_data.append(tmp)
+        # print(tmp.values)
+        # print(tmp)
+        # exit()
+        all_data.append(tmp.values)
     print(len(all_data))
     pickle.dump(all_data, open(save_file, 'wb'))
-
 
 
 if __name__ == '__main__':

@@ -3,7 +3,7 @@ import pickle
 import random
 from rnn_config import *
 
-# ["open", "close", "high", "low", "volume"]
+
 def _norm_zscore(data):
     mean = np.mean(data[:, :4])
     std = np.std(data[:, :4])
@@ -50,11 +50,13 @@ class DataIter:
                  data,
                  seq_len,
                  batch_size,
-                 predict_len):
+                 predict_len,
+                 is_train=True):
         self.data = data
         self.batch_size = batch_size
         self.predict_len = predict_len
         self.seq_len = seq_len
+        self.is_train = is_train
 
         self.init = False
         remove_num = 0
@@ -66,13 +68,11 @@ class DataIter:
                 remove_num += 1
         del self.data
         print('remove num: %d' % remove_num)
-        new_data = []
+        self.data = new_data = []
         for d in after_remove_data:
             for i in range(0, d.shape[0] - self.seq_len):
                 new_data.append(d[i:i + self.seq_len + 1])  # +1 is for label lenght == seq_len
-        self.data = np.array(new_data)
-        print('train data set size = {}'.format(self.data.shape))
-        self.all_sample_size = self.data.shape[0]
+        print('train data set size = {}'.format(len(self.data)))
         self.curr_idx = 0
         self.label = None
         self.reset()
@@ -86,12 +86,11 @@ class DataIter:
             self.data, self.label = list(zip(*pack))
             return
         else:
-            np.random.shuffle(self.data)
+            random.shuffle(self.data)
             self.init = True
         self.label = []
         data = []
-        for i in range(self.all_sample_size):
-            d = self.data[i]
+        for d in self.data:
             if filter_remove_up_stop(d):
                 continue
             if filter_nan(d):
@@ -105,6 +104,7 @@ class DataIter:
                 data.append(norm_data)
                 self.label.append(np.where(up_or_down > 1, 1, 0))
         self.data = data
+        self.all_sample_size = len(self.data)
 
     def next(self):
         """Returns the next batch of data."""
@@ -114,15 +114,33 @@ class DataIter:
         label = self.label[self.curr_idx:self.curr_idx + self.batch_size]
         self.curr_idx += self.batch_size
         data = np.array(data)
-        return data + np.random.randn(*data.shape) * 0.005, np.array(label)
+        if self.is_train:
+            # return data + np.random.randn(*data.shape) * 0.005, np.array(label)
+            return data, np.array(label)
+        else:
+            return data, np.array(label)
 
 
-def get_data_iter():
-    origin_data = pickle.load(open(DATA_PATH, 'rb'))
-    origin_data = [df.values[:, :INPUT_SIZE] for df in origin_data if df is not None]
+def get_train_data_iter():
+    origin_data = pickle.load(open(TRAIN_DATA_PATH, 'rb'))
+    # origin_data = [df.values[:, :INPUT_SIZE] for df in origin_data if df is not None]
     print('all origin data num = %s ' % len(origin_data))
     # origin_data = origin_data[:100]
     return DataIter(origin_data,
                     seq_len=SEQ_LEN,
                     batch_size=BATCH_SIZE,
                     predict_len=PREDICT_LEN)
+
+
+def get_infer_data_iter(batch_size=1):
+    origin_data = pickle.load(open(INFER_DATA_PATH, 'rb'))
+    print('all origin data num = %s ' % len(origin_data))
+    # origin_data = origin_data[:10]
+    return DataIter(origin_data,
+                    seq_len=SEQ_LEN,
+                    batch_size=1,
+                    predict_len=PREDICT_LEN,
+                    is_train=False)
+
+
+

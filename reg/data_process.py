@@ -110,7 +110,7 @@ class DataIter:
 
 
 def get_data_iter():
-    origin_data = pickle.load(open(DATA_PATH, 'rb'))
+    origin_data = pickle.load(open(TRAIN_DATA_PATH, 'rb'))
     origin_data = [df.values[:, :INPUT_SIZE] for df in origin_data if df is not None]
     print('all origin data num = %s ' % len(origin_data))
     # origin_data = origin_data[:1000]

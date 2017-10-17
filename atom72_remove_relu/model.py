@@ -1,7 +1,7 @@
 import tensorflow as tf
 from tensorflow.contrib.layers import fully_connected
 from rnn_config import *
-import numpy as np
+# import numpy as np
 
 
 def _single_cell(num_units, cell_type, forget_bias=1.0, residual_connection=False):
@@ -45,11 +45,19 @@ def get_model(batch_data, batch_label, is_train=True):
     batch_data = fully_connected(batch_data,
                                  num_outputs=INPUT_FC_NUM_OUPUT,
                                  activation_fn=None)
-    encoder_outputs, encoder_state = tf.nn.dynamic_rnn(multi_cell,
-                                                       inputs=batch_data,
-                                                       dtype=tf.float32,
-                                                       time_major=False)
-    output = encoder_outputs[:, -PREDICT_LEN:, :]
+    output, state = tf.nn.dynamic_rnn(multi_cell,
+                                      inputs=batch_data,
+                                      dtype=tf.float32,
+                                      time_major=False)
+    # batch_data = tf.transpose(batch_data, [1, 0, 2])
+    # batch_data = tf.unstack(batch_data, axis=0)
+    # encoder_outputs, encoder_state = tf.nn.static_rnn(multi_cell,
+    #                                                   inputs=batch_data,
+    #                                                   dtype=tf.float32)
+    # output = encoder_outputs[-PREDICT_LEN:]
+    # output = tf.stack(output, axis=0)
+    # output = tf.transpose(output, [1, 0, 2])
+    output = output[:, -PREDICT_LEN:, :]
     print('lstm output shape: %s' % output.get_shape())
     fc_output_0 = fully_connected(inputs=tf.reshape(output, shape=(-1, HIDDEN_UNITS)),
                                   num_outputs=FC_NUM_OUTPUT,
@@ -57,18 +65,14 @@ def get_model(batch_data, batch_label, is_train=True):
     logits = fully_connected(fc_output_0,
                              num_outputs=2,
                              activation_fn=None)
+
+    softmax_op = tf.nn.softmax(logits)
     if not is_train:
-        return tf.nn.softmax(logits)
+        return softmax_op
     # logits = tf.clip_by_value(logits, 1e-8, 0.95)
     reshaped_label = tf.reshape(batch_label, shape=(-1,))
     one_hot_label = tf.one_hot(reshaped_label, depth=2)
     print('one_hot_label shape: %s' % one_hot_label.shape)
-    # softmax = tf.nn.softmax(logits)
-    # print('softmax shape: %s' % softmax.shape)
-    # cross_entropy = tf.multiply(tf.multiply(one_hot_label, softmax), np.array([[1.0, 1.1]]))
-    # cross_entropy = tf.multiply(one_hot_label, softmax)
-    # cross_entropy = tf.reduce_sum(cross_entropy, axis=1)
-    # print('cross_entropy shape: %s' % cross_entropy.shape)
     acc = tf.reduce_sum(tf.cast(tf.equal(tf.argmax(logits, axis=1), reshaped_label), tf.int64))
     # cross_entropy = tf.nn.softmax_cross_entropy_with_logits(
     #     labels=tf.multiply(one_hot_label, np.array([[0.97, 1.0]])),
@@ -79,7 +83,6 @@ def get_model(batch_data, batch_label, is_train=True):
     cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=one_hot_label,
                                                             logits=logits)
     # ce_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=reshaped_label, logits=logits)
-    # print('ce_loss shape: %s' % ce_loss.shape)
     loss = tf.reduce_mean(cross_entropy)
 
     trainable_vars = tf.trainable_variables()
@@ -98,8 +101,8 @@ def get_model(batch_data, batch_label, is_train=True):
                                    global_step=global_step,
                                    end_learning_rate=END_LR,
                                    decay_steps=DECAY_STEP,
-                                   power=0.5)
+                                   power=0.6)
     opt = tf.train.MomentumOptimizer(lr, 0.9)
     # opt = tf.train.AdamOptimizer(lr)
     update = opt.apply_gradients(zip(clipped_gradients, trainable_vars), global_step=global_step)
-    return update, loss, acc, lr
+    return update, loss, acc, lr, softmax_op
