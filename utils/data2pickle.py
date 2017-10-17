@@ -11,7 +11,7 @@ def dataframe2pickle(root_path, save_file, shift=0):
         tmp = pandas.read_pickle(os.path.join(root_path, f))
         tmp = tmp[f[:f.rfind('.')]]
         # avoid the affect by list on trade market
-        tmp = tmp[fields][shift:]
+        tmp = tmp[fields]['2010-01-01':]
         # print(tmp.values)
         # print(tmp)
         # exit()
@@ -22,7 +22,7 @@ def dataframe2pickle(root_path, save_file, shift=0):
 
 if __name__ == '__main__':
     root_path = '/home/daiab/machine_disk/data/tushare_data/1d'
-    save_file = '/home/daiab/machine_disk/data/tushare_data/rq_1d.pkl'
+    save_file = '/home/daiab/machine_disk/data/tushare_data/rq_1d_from_2010.pkl'
     dataframe2pickle(root_path, save_file, shift=10)
 
 

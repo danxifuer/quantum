@@ -16,15 +16,17 @@ class Infer:
                 softmax_output = sess.run(softmax_op, feed_dict={data_p: data})
                 real = label[-1][-1]
                 # print(real)
-                if softmax_output[-1][1] > 0.95:  # up
+                if softmax_output[-1][1] > 0.7:  # up
                     filter_prob.append((softmax_output[-1][1], 1, real))
-                elif softmax_output[-1][0] > 0.95:  # down
+                elif softmax_output[-1][0] > 0.7:  # down
                     filter_prob.append((softmax_output[-1][0], 0, real))
             except StopIteration:
                 self.data_iter.reset()
                 filter_prob = sorted(filter_prob, key=lambda x: -x[0])
                 if len(filter_prob) > 20:
                     filter_prob = filter_prob[:20]
+                print('filter_prob >>>>>>')
+                print(filter_prob[:5])
                 up_right = 0
                 up_total = 0
                 down_right = 0

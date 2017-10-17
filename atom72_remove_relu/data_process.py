@@ -5,6 +5,7 @@ from rnn_config import *
 
 
 def _norm_zscore(data):
+    data = data.copy()
     mean = np.mean(data[:, :4])
     std = np.std(data[:, :4])
     data[:, :4] = (data[:, :4] - mean) / std
@@ -99,7 +100,7 @@ class DataIter:
             if filter_nan(up_or_down):
                 continue
             up_or_down = up_or_down[-self.predict_len:]
-            norm_data = _norm_max_min(d[:-1, :])
+            norm_data = _norm_zscore(d[:-1, :])
             if norm_data is not None:
                 data.append(norm_data)
                 self.label.append(np.where(up_or_down > 1, 1, 0))

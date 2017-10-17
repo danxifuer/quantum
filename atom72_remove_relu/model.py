@@ -42,9 +42,9 @@ def get_model(batch_data, batch_label, is_train=True):
                                       CELL_TYPE,
                                       residual_connection=residual_connection))
     multi_cell = tf.contrib.rnn.MultiRNNCell(cell_list)
-    batch_data = fully_connected(batch_data,
-                                 num_outputs=INPUT_FC_NUM_OUPUT,
-                                 activation_fn=None)
+    # batch_data = fully_connected(batch_data,
+    #                              num_outputs=INPUT_FC_NUM_OUPUT,
+    #                              activation_fn=None)
     output, state = tf.nn.dynamic_rnn(multi_cell,
                                       inputs=batch_data,
                                       dtype=tf.float32,
