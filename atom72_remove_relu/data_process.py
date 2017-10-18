@@ -2,6 +2,8 @@ import numpy as np
 import pickle
 import random
 from rnn_config import *
+import logging
+logger = logging.getLogger(__name__)
 
 
 def _norm_zscore(data):
@@ -32,7 +34,7 @@ def _norm_max_min(data):
     min_value = np.min(data[:, :4])
     max_value = np.max(data[:, :4])
     if (max_value - min_value) < 1e-7:
-        print('data error')
+        logger.info('data error')
         return None
     data[:, :4] = (data[:, :4] - min_value) / (max_value - min_value)
     col_num = data.shape[1]
@@ -40,7 +42,7 @@ def _norm_max_min(data):
         min_value = np.min(data[:, i])
         max_value = np.max(data[:, i])
         if (max_value - min_value) < 1e-7:
-            print('data error')
+            logger.info('data error')
             return None
         data[:, i] = (data[:, i] - min_value) / (max_value - min_value)
     return data
@@ -68,12 +70,12 @@ class DataIter:
             else:
                 remove_num += 1
         del self.data
-        print('remove num: %d' % remove_num)
+        logger.info('remove num: %d' % remove_num)
         self.data = new_data = []
         for d in after_remove_data:
             for i in range(0, d.shape[0] - self.seq_len):
                 new_data.append(d[i:i + self.seq_len + 1])  # +1 is for label lenght == seq_len
-        print('train data set size = {}'.format(len(self.data)))
+        logger.info('train data set size = {}'.format(len(self.data)))
         self.curr_idx = 0
         self.label = None
         self.reset()
@@ -125,7 +127,7 @@ class DataIter:
 def get_train_data_iter():
     origin_data = pickle.load(open(TRAIN_DATA_PATH, 'rb'))
     # origin_data = [df.values[:, :INPUT_SIZE] for df in origin_data if df is not None]
-    print('all origin data num = %s ' % len(origin_data))
+    logger.info('all origin data num = %s ' % len(origin_data))
     # origin_data = origin_data[:100]
     return DataIter(origin_data,
                     seq_len=SEQ_LEN,
@@ -135,7 +137,7 @@ def get_train_data_iter():
 
 def get_infer_data_iter(batch_size=1):
     origin_data = pickle.load(open(INFER_DATA_PATH, 'rb'))
-    print('all origin data num = %s ' % len(origin_data))
+    logger.info('all origin data num = %s ' % len(origin_data))
     # origin_data = origin_data[:10]
     return DataIter(origin_data,
                     seq_len=SEQ_LEN,

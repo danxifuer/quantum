@@ -1,46 +1,7 @@
 import tensorflow as tf
 from tensorflow.contrib.layers import fully_connected
 from rnn_config import *
-
 # import numpy as np
-
-'''
-def create_attention_mechanism(attention_option, num_units, memory,
-                               source_sequence_length):
-    """Create attention mechanism based on the attention_option."""
-    # Mechanism
-    if attention_option == "luong":
-        attention_mechanism = tf.contrib.seq2seq.LuongAttention(
-            num_units, memory, memory_sequence_length=source_sequence_length)
-    elif attention_option == "scaled_luong":
-        attention_mechanism = tf.contrib.seq2seq.LuongAttention(
-            num_units,
-            memory,
-            memory_sequence_length=source_sequence_length,
-            scale=True)
-    elif attention_option == "bahdanau":
-        attention_mechanism = tf.contrib.seq2seq.BahdanauAttention(
-            num_units, memory, memory_sequence_length=source_sequence_length)
-    elif attention_option == "normed_bahdanau":
-        attention_mechanism = tf.contrib.seq2seq.BahdanauAttention(
-            num_units,
-            memory,
-            memory_sequence_length=source_sequence_length,
-            normalize=True)
-    else:
-        raise ValueError("Unknown attention option %s" % attention_option)
-
-    return attention_mechanism
-
-
-
-cell = tf.contrib.seq2seq.AttentionWrapper(
-            cell,
-            attention_mechanism,
-            attention_layer_size=num_units,
-            alignment_history=alignment_history,
-            name="attention")
-'''
 
 
 def _single_cell(num_units, cell_type, forget_bias=1.0, residual_connection=False):
@@ -52,8 +13,7 @@ def _single_cell(num_units, cell_type, forget_bias=1.0, residual_connection=Fals
     elif cell_type == 'RNN':
         cell = tf.contrib.rnn.BasicRNNCell(num_units=num_units)
     elif cell_type == 'GridLSTM':
-        cell = tf.contrib.rnn.GridLSTMCell(num_units=num_units,
-                                           num_frequency_blocks=[1, 2, 3])
+        cell = tf.contrib.rnn.GridLSTMCell(num_units=num_units, num_frequency_blocks=[1, 2, 3])
     elif cell_type == 'LayerNormLSTM':
         cell = tf.contrib.rnn.LayerNormBasicLSTMCell(
             num_units,
@@ -78,15 +38,9 @@ def get_model(batch_data, batch_label, is_train=True):
     cell_list = []
     for i in range(NUM_LAYERS):
         residual_connection = i >= NUM_LAYERS - NUM_RESIDUAL_LAYERS
-        cell = _single_cell(HIDDEN_UNITS,
-                            CELL_TYPE,
-                            residual_connection=residual_connection)
-        if i == 0:
-            cell = tf.contrib.rnn.AttentionCellWrapper(cell,
-                                                       attn_length=ATTN_LENGTH,
-                                                       state_is_tuple=True)
-        cell = tf.nn.rnn_cell.DropoutWrapper(cell, output_keep_prob=DROPOUT_KEEP)
-        cell_list.append(cell)
+        cell_list.append(_single_cell(HIDDEN_UNITS,
+                                      CELL_TYPE,
+                                      residual_connection=residual_connection))
     multi_cell = tf.contrib.rnn.MultiRNNCell(cell_list)
     # batch_data = fully_connected(batch_data,
     #                              num_outputs=INPUT_FC_NUM_OUPUT,
@@ -95,7 +49,6 @@ def get_model(batch_data, batch_label, is_train=True):
                                       inputs=batch_data,
                                       dtype=tf.float32,
                                       time_major=False)
-    output = output[:, -PREDICT_LEN:, :]
     # batch_data = tf.transpose(batch_data, [1, 0, 2])
     # batch_data = tf.unstack(batch_data, axis=0)
     # encoder_outputs, encoder_state = tf.nn.static_rnn(multi_cell,
@@ -104,9 +57,9 @@ def get_model(batch_data, batch_label, is_train=True):
     # output = encoder_outputs[-PREDICT_LEN:]
     # output = tf.stack(output, axis=0)
     # output = tf.transpose(output, [1, 0, 2])
+    output = output[:, -PREDICT_LEN:, :]
     print('lstm output shape: %s' % output.get_shape())
-    output_reshape = tf.reshape(output, shape=(-1, HIDDEN_UNITS))
-    fc_output_0 = fully_connected(inputs=output_reshape,
+    fc_output_0 = fully_connected(inputs=tf.reshape(output, shape=(-1, HIDDEN_UNITS)),
                                   num_outputs=FC_NUM_OUTPUT,
                                   normalizer_fn=tf.contrib.layers.batch_norm)
     logits = fully_connected(fc_output_0,

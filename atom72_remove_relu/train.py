@@ -1,7 +1,15 @@
 from data_process import get_train_data_iter, get_infer_data_iter
-import tensorflow as tf
 from rnn_config import EPOCH, BATCH_SIZE, PREDICT_LEN, SEQ_LEN, INPUT_SIZE, RESTORE_PATH
 from model import get_model
+import logging
+import tensorflow as tf
+logging.basicConfig(level=logging.DEBUG,
+                    format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
+                    datefmt='%a, %d %b %Y %H:%M:%S',
+                    filename='./train.log',
+                    filemode='w')
+logger = logging.getLogger(__name__)
+
 
 
 class Infer:
@@ -15,18 +23,18 @@ class Infer:
                 data, label = self.data_iter.next()
                 softmax_output = sess.run(softmax_op, feed_dict={data_p: data})
                 real = label[-1][-1]
-                # print(real)
-                if softmax_output[-1][1] > 0.7:  # up
+                # logger.info(real)
+                if softmax_output[-1][1] > 0.6:  # up
                     filter_prob.append((softmax_output[-1][1], 1, real))
-                elif softmax_output[-1][0] > 0.7:  # down
+                elif softmax_output[-1][0] > 0.6:  # down
                     filter_prob.append((softmax_output[-1][0], 0, real))
             except StopIteration:
                 self.data_iter.reset()
                 filter_prob = sorted(filter_prob, key=lambda x: -x[0])
                 if len(filter_prob) > 20:
                     filter_prob = filter_prob[:20]
-                print('filter_prob >>>>>>')
-                print(filter_prob[:5])
+                logger.info('filter_prob >>>>>>')
+                logger.info(filter_prob[:5])
                 up_right = 0
                 up_total = 0
                 down_right = 0
@@ -40,13 +48,10 @@ class Infer:
                         if item[1] == item[2]:
                             down_right += 1
                         down_total += 1
-                if down_total == 0 or up_total == 0:
-                    print('error and passed, down_total: %s, up_total: %s' % (down_total, up_total))
-                    return
-                print('## up == (%s, %s) down == (%s, %s)' % (up_total,
-                                                              up_right / up_total,
-                                                              down_total,
-                                                              down_right / down_total))
+                logger.info('## up == (%s, %s) down == (%s, %s)' % (up_total,
+                                                                    up_right / (up_total + 1e-8),
+                                                                    down_total,
+                                                                    down_right / (down_total + 1e-8)))
                 break
 
 
@@ -59,7 +64,6 @@ iter_num = 0
 LOG_RATE = 40
 
 infer_class = Infer()
-
 
 with tf.Session() as sess:
     saver = tf.train.Saver()
@@ -75,7 +79,7 @@ with tf.Session() as sess:
             infer_class.validate(sess, softmax_op)
             data_iter.reset()
             epoch += 1
-            print('epoch == %d' % epoch)
+            logger.info('epoch == %d' % epoch)
             if epoch >= 5:
                 saver.save(sess, save_path=RESTORE_PATH)
             if epoch >= EPOCH:
@@ -87,9 +91,9 @@ with tf.Session() as sess:
         total_loss += loss_value
         total_acc += acc_value
         if iter_num % LOG_RATE == 0:
-            print('{}#{}; loss: {}; acc: {}; lr: {}'.format(epoch,
-                                                            iter_num, total_loss / LOG_RATE,
-                                                            total_acc / (LOG_RATE * BATCH_SIZE * PREDICT_LEN),
-                                                            lr_value))
+            logger.info('{}#{}; loss: {}; acc: {}; lr: {}'.format(epoch,
+                                                                  iter_num, total_loss / LOG_RATE,
+                                                                  total_acc / (LOG_RATE * BATCH_SIZE * PREDICT_LEN),
+                                                                  lr_value))
             total_acc = total_loss = 0
         iter_num += 1
