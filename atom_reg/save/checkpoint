@@ -1,0 +1,2 @@
+model_checkpoint_path: "/home/daiab/machine_disk/code/quantum/atom72_remove_relu/save/model"
+all_model_checkpoint_paths: "/home/daiab/machine_disk/code/quantum/atom72_remove_relu/save/model"

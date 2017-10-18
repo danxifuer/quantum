@@ -22,7 +22,7 @@ IDX = 1
 # DATA_PATH = '/home/daiab/machine_disk/code/Craft/rnn/share/all_data.pkl.2015-01-05_2017-09-13'
 TRAIN_DATA_PATH = '/home/daiab/machine_disk/data/tushare_data/rq_1d.pkl'
 INFER_DATA_PATH = '/home/daiab/machine_disk/code/quantum/utils/val_data.pkl'
-RESTORE_PATH = '/home/daiab/machine_disk/code/quantum/atom72_remove_relu/save/model'
+RESTORE_PATH = '/home/daiab/machine_disk/code/quantum/atom_cls/save/model'
 
 
 # infer
