@@ -106,10 +106,10 @@ def get_model(batch_data, batch_label, is_train=True):
                            activation_fn=None)
     # logits = tf.clip_by_value(logits, 1e-8, 0.95)
     reshaped_label = tf.reshape(batch_label, shape=(-1,))
-    reg_loss = tf.reduce_sum(tf.sqrt(tf.squared_difference(pred, reshaped_label)))
+    reg_loss = tf.nn.l2_loss(tf.subtract(pred, reshaped_label))
     trainable_vars = tf.trainable_variables()
     gradients = tf.gradients(reg_loss, trainable_vars)  # ,
-    clipped_gradients = _gradient_clip(gradients, max_gradient_norm=5.0)
+    clipped_gradients = _gradient_clip(gradients, max_gradient_norm=1.0)
     global_step = tf.Variable(0, trainable=False)
     warm_up_factor = 0.9
     warm_up_steps = 200
@@ -124,7 +124,7 @@ def get_model(batch_data, batch_label, is_train=True):
                                    end_learning_rate=END_LR,
                                    decay_steps=DECAY_STEP,
                                    power=0.6)
-    opt = tf.train.MomentumOptimizer(lr, 0.9)
-    # opt = tf.train.AdamOptimizer(lr)
+    # opt = tf.train.MomentumOptimizer(lr, 0.9)
+    opt = tf.train.AdamOptimizer(lr)
     update = opt.apply_gradients(zip(clipped_gradients, trainable_vars), global_step=global_step)
     return update, reg_loss, lr

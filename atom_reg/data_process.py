@@ -98,7 +98,7 @@ class DataIter:
                 continue
             if filter_nan(d):
                 continue
-            up_or_down = d[1:, IDX] / d[:-1, IDX]
+            up_or_down = np.log1p(d[1:, IDX] / d[:-1, IDX])
             if filter_nan(up_or_down):
                 continue
             up_or_down = up_or_down[-self.predict_len:]

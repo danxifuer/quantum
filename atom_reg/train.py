@@ -21,7 +21,7 @@ class Infer:
         while True:
             try:
                 data, label = self.data_iter.next()
-                loss_value = sess.run(loss, feed_dict={data_p: data})
+                loss_value = sess.run(loss, feed_dict={data_p: data, label_p: label})
                 filter_prob.append(loss_value)
             except StopIteration:
                 self.data_iter.reset()
@@ -33,7 +33,7 @@ class Infer:
 
 
 data_p = tf.placeholder(dtype=tf.float32, shape=(None, SEQ_LEN, INPUT_SIZE))
-label_p = tf.placeholder(dtype=tf.int64, shape=(None, PREDICT_LEN))
+label_p = tf.placeholder(dtype=tf.float32, shape=(None, PREDICT_LEN))
 update, loss, lr = get_model(data_p, label_p)
 data_iter = get_train_data_iter()
 
