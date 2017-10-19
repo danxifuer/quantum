@@ -2,46 +2,6 @@ import tensorflow as tf
 from tensorflow.contrib.layers import fully_connected
 from rnn_config import *
 
-# import numpy as np
-
-'''
-def create_attention_mechanism(attention_option, num_units, memory,
-                               source_sequence_length):
-    """Create attention mechanism based on the attention_option."""
-    # Mechanism
-    if attention_option == "luong":
-        attention_mechanism = tf.contrib.seq2seq.LuongAttention(
-            num_units, memory, memory_sequence_length=source_sequence_length)
-    elif attention_option == "scaled_luong":
-        attention_mechanism = tf.contrib.seq2seq.LuongAttention(
-            num_units,
-            memory,
-            memory_sequence_length=source_sequence_length,
-            scale=True)
-    elif attention_option == "bahdanau":
-        attention_mechanism = tf.contrib.seq2seq.BahdanauAttention(
-            num_units, memory, memory_sequence_length=source_sequence_length)
-    elif attention_option == "normed_bahdanau":
-        attention_mechanism = tf.contrib.seq2seq.BahdanauAttention(
-            num_units,
-            memory,
-            memory_sequence_length=source_sequence_length,
-            normalize=True)
-    else:
-        raise ValueError("Unknown attention option %s" % attention_option)
-
-    return attention_mechanism
-
-
-
-cell = tf.contrib.seq2seq.AttentionWrapper(
-            cell,
-            attention_mechanism,
-            attention_layer_size=num_units,
-            alignment_history=alignment_history,
-            name="attention")
-'''
-
 
 def _single_cell(num_units, cell_type, forget_bias=1.0, residual_connection=False):
     if cell_type == 'GRU':
@@ -81,10 +41,10 @@ def get_model(batch_data, batch_label, is_train=True):
         cell = _single_cell(HIDDEN_UNITS,
                             CELL_TYPE,
                             residual_connection=residual_connection)
-        if i == 0:
-            cell = tf.contrib.rnn.AttentionCellWrapper(cell,
-                                                       attn_length=ATTN_LENGTH,
-                                                       state_is_tuple=True)
+        # if i == 0:
+        #     cell = tf.contrib.rnn.AttentionCellWrapper(cell,
+        #                                                attn_length=ATTN_LENGTH,
+        #                                                state_is_tuple=True)
         cell = tf.nn.rnn_cell.DropoutWrapper(cell, output_keep_prob=DROPOUT_KEEP)
         cell_list.append(cell)
     multi_cell = tf.contrib.rnn.MultiRNNCell(cell_list)
@@ -98,15 +58,15 @@ def get_model(batch_data, batch_label, is_train=True):
     output = output[:, -PREDICT_LEN:, :]
     print('lstm output shape: %s' % output.get_shape())
     output_reshape = tf.reshape(output, shape=(-1, HIDDEN_UNITS))
-    fc_output_0 = fully_connected(inputs=output_reshape,
-                                  num_outputs=FC_NUM_OUTPUT,
-                                  normalizer_fn=tf.contrib.layers.batch_norm)
-    pred = fully_connected(fc_output_0,
+    # fc_output_0 = fully_connected(inputs=output_reshape,
+    #                               num_outputs=FC_NUM_OUTPUT,
+    #                               normalizer_fn=tf.contrib.layers.batch_norm)
+    pred = fully_connected(output_reshape,
                            num_outputs=1,
                            activation_fn=None)
     # logits = tf.clip_by_value(logits, 1e-8, 0.95)
     reshaped_label = tf.reshape(batch_label, shape=(-1,))
-    reg_loss = tf.nn.l2_loss(tf.subtract(pred, reshaped_label))
+    reg_loss = tf.reduce_mean(tf.squared_difference(pred, reshaped_label))
     trainable_vars = tf.trainable_variables()
     gradients = tf.gradients(reg_loss, trainable_vars)  # ,
     clipped_gradients = _gradient_clip(gradients, max_gradient_norm=1.0)
@@ -124,7 +84,11 @@ def get_model(batch_data, batch_label, is_train=True):
                                    end_learning_rate=END_LR,
                                    decay_steps=DECAY_STEP,
                                    power=0.6)
-    # opt = tf.train.MomentumOptimizer(lr, 0.9)
-    opt = tf.train.AdamOptimizer(lr)
+    opt = tf.train.MomentumOptimizer(lr, 0.9)
+    # opt = tf.train.AdamOptimizer(lr)
     update = opt.apply_gradients(zip(clipped_gradients, trainable_vars), global_step=global_step)
     return update, reg_loss, lr
+
+
+# import numpy as np
+# (np.log1p(1.1) - np.log1p(1.0)) ** 2
