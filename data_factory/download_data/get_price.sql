@@ -15,3 +15,5 @@ mysqladmin -u root -p create rqalpha
   `trade_date` datetime DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+ALTER  TABLE  `get_price`  ADD  INDEX index_name (`code`,  `trade_date`);
