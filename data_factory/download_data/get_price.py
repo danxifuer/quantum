@@ -9,7 +9,7 @@ SEND_SERVER = '116.196.115.222'
 PORT = 5000
 FREQ = '1d'
 START_DATE = '2006-01-04'
-END_DATE = '2017-09-09'
+END_DATE = '2017-10-18'
 TYPE = 'get_price'
 START_CODE = None
 
@@ -46,8 +46,8 @@ def get_data():
             share_data = pandas.DataFrame(share_data)
             send_data({'value': share_data, 'code': code, 'freq': FREQ, 'type': TYPE})
             logger.info('# %s, code: %s time: %s' % (i, code, time.time() - now))
-        except:
-            logger.exception('code: %s error !!!!!!!!!!!' % code)
+        except Exception as e:
+            logger.exception('code: %s error: %s !!!!!!!!!!!' % (code, str(e)))
             exit()
 
 
