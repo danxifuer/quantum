@@ -58,7 +58,7 @@ def cal_return(code, days):
     returns = close_p[days:] / close_p[:-days]
     for i, trade_date in enumerate(trade_date_list):
         ret = returns[i]
-        sql = "insert into future_two_day_returns (close_return, code, trade_date) values ({:.10f}, '{}', '{}')".format(
+        sql = "insert into future_one_day_returns (close_return, code, trade_date) values ({:.10f}, '{}', '{}')".format(
             ret, code, trade_date)
         conn_manager.exec_sql(sql)
 
