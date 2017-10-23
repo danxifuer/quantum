@@ -1,11 +1,14 @@
-import tensorflow as tf
-import numpy as np
-from rnn_config import *
-from model import get_model
-from data_process import _norm_max_min
-from rqalpha.api.api_base import all_instruments, history_bars
-from rqalpha.api import order_shares
 import logging
+
+import numpy as np
+import tensorflow as tf
+from rqalpha.api import order_shares
+from rqalpha.api.api_base import all_instruments, history_bars
+
+from data_process import _norm_max_min
+from model import get_model
+from rnn_config import *
+
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
                     datefmt='%a, %d %b %Y %H:%M:%S')
@@ -70,4 +73,4 @@ def after_trading(context):
     print('========== over ==========')
 
 
-# rqalpha run -s 2016-01-01 -e 2016-02-01 -f /home/daiab/machine_disk/code/Craft/rnn/stable/infer.py  --account stock 100000 -p -bm 000001.XSHE
+# rqalpha run -s 2016-01-01 -e 2016-02-01 -f /home/daiab/machine_disk/code/Craft/rnn/atom72/infer.py  --account stock 100000 -p -bm 000001.XSHE

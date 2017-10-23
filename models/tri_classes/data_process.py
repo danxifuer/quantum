@@ -1,6 +1,8 @@
-import numpy as np
 import pickle
 import random
+
+import numpy as np
+
 from rnn_config import *
 
 

@@ -1,6 +1,8 @@
-import numpy as np
 import pickle
 import random
+
+import numpy as np
+
 from rnn_config import *
 
 
@@ -19,8 +21,9 @@ def _norm_zscore(data):
     return data
 
 
-def _norm_max_min(data):
-    data = data.copy()
+def _norm_max_min(data, copy=False):
+    if copy:
+        data = data.copy()
     min_value = np.min(data[:, :4])
     max_value = np.max(data[:, :4])
     if (max_value - min_value) < 1e-7:
@@ -110,10 +113,10 @@ class DataIter:
 
 
 def get_data_iter():
-    origin_data = pickle.load(open(DATA_PATH, 'rb'))
-    # origin_data = [df.values[:, :INPUT_SIZE] for df in origin_data if df is not None]
+    origin_data = pickle.load(open(TRAIN_DATA_PATH, 'rb'))
+    origin_data = [df.values[:, :INPUT_SIZE] for df in origin_data if df is not None]
     print('all origin data num = %s ' % len(origin_data))
-    origin_data = origin_data[:100]
+    # origin_data = origin_data[:100]
     return DataIter(origin_data,
                     seq_len=SEQ_LEN,
                     batch_size=BATCH_SIZE,

@@ -1,7 +1,7 @@
 import tensorflow as tf
 from tensorflow.contrib.layers import fully_connected
+
 from rnn_config import *
-from tensorflow.contrib import seq2seq, legacy_seq2seq
 
 
 def _single_cell(num_units, cell_type, forget_bias=1.0, residual_connection=False):
@@ -35,69 +35,34 @@ def _gradient_clip(gradients, max_gradient_norm):
 
 
 def get_model(batch_data, batch_label, is_train=True):
-    # print('batch_label shape: %s' % batch_label.get_shape())
     cell_list = []
     for i in range(NUM_LAYERS):
         residual_connection = i >= NUM_LAYERS - NUM_RESIDUAL_LAYERS
         cell_list.append(_single_cell(HIDDEN_UNITS,
                                       CELL_TYPE,
                                       residual_connection=residual_connection))
-    encoder_cell = tf.contrib.rnn.MultiRNNCell(cell_list)
-    # ######## encoder #########
-    encoder_input, decoder_input = tf.split(batch_data, [SEQ_LEN - PREDICT_LEN, PREDICT_LEN], axis=1)
-    # batch_data = fully_connected(batch_data,
-    #                              num_outputs=INPUT_FC_NUM_OUPUT,
-    #                              activation_fn=None)
-    print('encoder_input shape: %s, decoder_input shape: %s' % (encoder_input.get_shape(),
-                                                                decoder_input.get_shape()))
-    encoder_outputs, encoder_state = tf.nn.dynamic_rnn(encoder_cell,
-                                                       inputs=encoder_input,
+    multi_cell = tf.contrib.rnn.MultiRNNCell(cell_list)
+    encoder_outputs, encoder_state = tf.nn.dynamic_rnn(multi_cell,
+                                                       inputs=batch_data,
                                                        dtype=tf.float32,
                                                        time_major=False)
-    print('encoder_state shape: %s' % encoder_state[0].get_shape())
-    # ####### decoder ##########
-    cell_list = []
-    for i in range(NUM_LAYERS):
-        residual_connection = i >= NUM_LAYERS - NUM_RESIDUAL_LAYERS
-        cell_list.append(_single_cell(HIDDEN_UNITS,
-                                      CELL_TYPE,
-                                      residual_connection=residual_connection))
-    decoder_cell = tf.contrib.rnn.MultiRNNCell(cell_list)
-    if is_train:
-        helper = seq2seq.TrainingHelper(decoder_input,
-                                        [PREDICT_LEN for _ in range(BATCH_SIZE)],
-                                        time_major=False)
-    else:
-        helper = seq2seq.TrainingHelper(decoder_input,
-                                        [PREDICT_LEN],
-                                        time_major=False)
-
-    decoder = seq2seq.BasicDecoder(decoder_cell,
-                                   helper,
-                                   encoder_state)
-                                   # output_layer=Dense(2))
-    outputs, final_context_state, _ = seq2seq.dynamic_decode(decoder)
-    print('outputs.rnn_output shape: %s' % outputs.rnn_output.get_shape())
-    # from tensorflow.python.layers.core import Dense
-    # fc_output_0 = Dense(FC_NUM_OUTPUT)(outputs.rnn_output)
-    # logits = Dense(2)(fc_output_0)
-    fc_output_0 = fully_connected(inputs=tf.reshape(outputs.rnn_output,
-                                                    shape=(-1, HIDDEN_UNITS)),
+    output = encoder_outputs[:, -PREDICT_LEN:, :]
+    print('lstm output shape: %s' % output.get_shape())
+    fc_output_0 = fully_connected(inputs=tf.reshape(output, shape=(-1, HIDDEN_UNITS)),
                                   num_outputs=FC_NUM_OUTPUT,
                                   activation_fn=tf.nn.relu,
                                   normalizer_fn=tf.contrib.layers.batch_norm)
     logits = fully_connected(fc_output_0,
-                             num_outputs=2,
-                             activation_fn=None)
-    print('logits shape: %s' % logits.get_shape())
-
+                             activation_fn=None,
+                             num_outputs=2)
     if not is_train:
+        print('model infer %s ~~~~~~' % __file__)
         return tf.nn.softmax(logits)
     # logits = tf.clip_by_value(logits, 1e-8, 0.99)
     reshaped_label = tf.reshape(batch_label, shape=(-1,))
     acc = tf.reduce_sum(tf.cast(tf.equal(tf.argmax(logits, axis=1), reshaped_label), tf.int64))
-    cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=reshaped_label, logits=logits)
-    loss = tf.reduce_mean(cross_entropy)
+    ce_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=reshaped_label, logits=logits)
+    loss = tf.reduce_mean(ce_loss)
 
     trainable_vars = tf.trainable_variables()
     gradients = tf.gradients(loss, trainable_vars)  # ,
@@ -116,7 +81,7 @@ def get_model(batch_data, batch_label, is_train=True):
                                    end_learning_rate=END_LR,
                                    decay_steps=DECAY_STEP,
                                    power=0.5)
-    opt = tf.train.MomentumOptimizer(lr, momentum=0.9)
+    opt = tf.train.GradientDescentOptimizer(lr)
     # opt = tf.train.AdamOptimizer(lr)
     update = opt.apply_gradients(zip(clipped_gradients, trainable_vars), global_step=global_step)
     return update, loss, acc, lr
