@@ -6,3 +6,5 @@
 */checkpoint
 *.pkl
 *.log
+*.records
+*.tfrecords

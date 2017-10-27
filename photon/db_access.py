@@ -1,5 +1,6 @@
 import pymysql
 import time
+import numpy as np
 
 FREQ_1D_FIELDS = ['open', 'high', 'low', 'close', 'volume']
 HOST = '0.0.0.0'
@@ -43,42 +44,43 @@ def get_ohlcv_by_date(start_date, end_date, code):
     sql = "select open, high, low, close, volume from get_price where trade_date >= '%s' and trade_date <= '%s' \
             and code = '%s' order by trade_date asc"
     sql = sql % (start_date, end_date, code)
-    return conn_manager.query_sql(sql)
+    ret = conn_manager.query_sql(sql)
+    if len(ret) == 0:
+        return None
+    return np.array(ret, dtype=np.float32)
 
 
 def get_ohlcv(code):
     sql = "select open, high, low, close, volume from get_price where \
             and code = '%s' order by trade_date asc" % code
-    return conn_manager.query_sql(sql)
+    ret = conn_manager.query_sql(sql)
+    if len(ret) == 0:
+        return None
+    return np.array(ret, dtype=np.float32)
 
 
 def get_ohlcv_pre_ret(code, pre_days='2d'):
     if pre_days == '2d':
-        sql = 'select p.open, p.high, p.low, p.close, p.volume, r.close_return ' \
-              ' from get_price as p ' \
-              ' join pre_two_day_returns as r on r.trade_date = p.trade_date ' \
-              ' where p.code = "%s" order by p.trade_date asc' % code
+        sql = 'select open, high, low, close, volume, pre_two_day_returns ' \
+              ' from get_price ' \
+              ' where code = "%s" order by trade_date asc' % code
     else:
         raise NotImplementedError
-    return conn_manager.query_sql(sql)
+    ret = conn_manager.query_sql(sql)
+    if len(ret) == 0:
+        return None
+    return np.array(ret, dtype=np.float32)
 
 
 def get_ohlcv_future_ret(code, future_days='1d'):
     assert future_days == '1d', 'NotImplementError'
-    sql = 'select p.open, p.high, p.low, p.close, p.volume, r.close_return ' \
-          ' from get_price as p ' \
-          ' join future_one_day_returns as r on r.trade_date = p.trade_date ' \
-          ' where p.code = "%s" order by p.trade_date asc' % code
-    return conn_manager.query_sql(sql)
-
-
-def get_future_returns(start_date, end_date, code, future_days='1d'):
-    if future_days == '1d':
-        sql = 'select close_return from future_one_day_returns where' \
-              ' trade_date >= "%s" and trade_date <= "%s" and code = "%s"' % (start_date, end_date, code)
-    else:
-        raise NotImplementedError
-    return conn_manager.query_sql(sql)
+    sql = 'select open, high, low, close, volume, future_one_day_returns ' \
+          ' from get_price ' \
+          ' where code = "%s" order by trade_date asc' % code
+    ret = conn_manager.query_sql(sql)
+    if len(ret) == 0:
+        return None
+    return np.array(ret, dtype=np.float32)
 
 
 def get_code(from_date=None, end_date=None, greater_days=200):
@@ -93,11 +95,12 @@ def get_code(from_date=None, end_date=None, greater_days=200):
         sql += ' and from_date >= "%s" ' % from_date
     if end_date:
         sql += ' and end_date <= "%s" ' % from_date
-    code_list = conn_manager.query_sql(sql)
-    return [c[0] for c in code_list]
+    cl = conn_manager.query_sql(sql)
+    return [c[0] for c in cl]
 
 
 if __name__ == '__main__':
     code_list = get_code()
     print(code_list[0])
-    # print(get_ohlcv_future_ret(code_list[0]))
+    data = get_ohlcv_future_ret(code_list[0])
+    print(data[0:2])
