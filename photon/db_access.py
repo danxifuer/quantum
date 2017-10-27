@@ -7,7 +7,6 @@ console = logging.StreamHandler()
 logging.basicConfig(level=logging.DEBUG, format=head, handlers=[console])
 
 
-FREQ_1D_FIELDS = ['open', 'high', 'low', 'close', 'volume']
 HOST = '0.0.0.0'
 PORT = 5000
 BUFSIZ = 1024

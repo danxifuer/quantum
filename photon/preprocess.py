@@ -29,9 +29,17 @@ class Norm:
 
 class NaNFilter(Filter):
     def __call__(self, data):
-        if np.any(np.isnan(data)):
+        if np.all(np.isfinite(data)):
+            logging.info('discovery some data nan or other')
             return None
         return data
+
+
+# class InfFilter(Filter):
+#     def __call__(self, data):
+#         if np.any(np.isinf(data)):
+#             return None
+#         return data
 
 
 class ContinueUpFilter(Filter):
@@ -103,7 +111,8 @@ class Pipeline:
         self.filters = [NaNFilter(),
                         ContinueUpFilter(high_idx=1, low_idx=2),
                         RatioNorm({'open': 0, 'high': 1, 'low': 2,
-                                   'close': 3, 'volume': 4}, use_log1p=True)]
+                                   'close': 3, 'volume': 4}, use_log1p=True),
+                        NaNFilter()]
 
     def __call__(self, data):
         data = data.copy()
