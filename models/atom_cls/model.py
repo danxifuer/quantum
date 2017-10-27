@@ -106,11 +106,11 @@ def get_model(batch_data, batch_label, is_train=True):
     # output = tf.transpose(output, [1, 0, 2])
     print('lstm output shape: %s' % output.get_shape())
     output_reshape = tf.reshape(output, shape=(-1, HIDDEN_UNITS))
-    fc_output_0 = fully_connected(inputs=output_reshape,
-                                  num_outputs=FC_NUM_OUTPUT,
-                                  normalizer_fn=tf.contrib.layers.batch_norm)
-    logits = fully_connected(fc_output_0,
-                             num_outputs=40,
+    # fc_output_0 = fully_connected(inputs=output_reshape,
+    #                               num_outputs=FC_NUM_OUTPUT,
+    #                               normalizer_fn=tf.contrib.layers.batch_norm)
+    logits = fully_connected(output_reshape,
+                             num_outputs=NUM_CLASSES,
                              activation_fn=None)
 
     softmax_op = tf.nn.softmax(logits)
@@ -120,7 +120,7 @@ def get_model(batch_data, batch_label, is_train=True):
     # reshaped_label = tf.reshape(batch_label, shape=(-1,))
     # one_hot_label = tf.one_hot(reshaped_label, depth=2)
     # print('one_hot_label shape: %s' % one_hot_label.shape)
-    acc = tf.reduce_sum(tf.cast(tf.equal(tf.argmax(logits, axis=1), batch_label), tf.int64))
+    acc = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(logits, axis=1), batch_label), tf.int64))
     # cross_entropy = tf.nn.softmax_cross_entropy_with_logits(
     #     labels=tf.multiply(one_hot_label, np.array([[0.97, 1.0]])),
     #     logits=logits)
@@ -149,7 +149,7 @@ def get_model(batch_data, batch_label, is_train=True):
                                    end_learning_rate=END_LR,
                                    decay_steps=DECAY_STEP,
                                    power=0.6)
-    opt = tf.train.MomentumOptimizer(lr, 0.9)
-    # opt = tf.train.AdamOptimizer(lr)
+    # opt = tf.train.MomentumOptimizer(lr, 0.9)
+    opt = tf.train.AdamOptimizer(lr)
     update = opt.apply_gradients(zip(clipped_gradients, trainable_vars), global_step=global_step)
     return update, loss, acc, lr, softmax_op

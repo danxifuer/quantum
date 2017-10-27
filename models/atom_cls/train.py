@@ -65,7 +65,6 @@ LOG_RATE = 40
 with tf.Session() as sess:
     saver = tf.train.Saver()
     epoch = 0
-    sess.run(tf.global_variables_initializer())
     # saver.restore(sess, RESTORE_PATH)
     total_loss = 0
     total_acc = 0
@@ -81,7 +80,7 @@ with tf.Session() as sess:
             logger.info('{}#{}; loss: {:.6f}; acc: {:.6f}; lr: {:.8f}'.format(epoch,
                                                                               iter_num, total_loss / LOG_RATE,
                                                                               total_acc / (
-                                                                              LOG_RATE * BATCH_SIZE * PREDICT_LEN),
+                                                                              LOG_RATE * PREDICT_LEN),
                                                                               lr_value))
             total_acc = total_loss = 0
         if iter_num > DECAY_STEP:

@@ -1,5 +1,5 @@
 from photon.db_access import *
-from photon.aux import Pipeline, LabelGenerator
+from photon.preprocess import Pipeline, LabelGenerator
 from random import shuffle
 import tensorflow as tf
 import logging
