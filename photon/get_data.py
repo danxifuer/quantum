@@ -2,7 +2,7 @@ from photon.db_access import *
 from photon.aux import Pipeline, LabelGenerator
 from random import shuffle
 import tensorflow as tf
-import pickle
+import logging
 
 
 def get_ohlcvr_and_shuffle_idx(use_days, remove_head_num=10):
@@ -10,11 +10,14 @@ def get_ohlcvr_and_shuffle_idx(use_days, remove_head_num=10):
     all_data = []
     # TODO: delete this
     # code_list = code_list[:3]
-
+    query_count = 0
     for code in code_list:
         tmp = get_ohlcv_future_ret(code)
-        if len(tmp) <= (remove_head_num + use_days + 5):  # +5 is avoid error
+        if tmp.shape[0] <= (remove_head_num + use_days + 5):  # +5 is avoid error
             continue
+        query_count += 1
+        if query_count % 100 == 0:
+            logging.info('query database: %s', query_count)
         all_data.append(tmp[remove_head_num:])
     idx_list = []
     for i, d in enumerate(all_data):
@@ -59,12 +62,12 @@ def write_ohlcvr(use_days, rec_name, remove_head_num=10, compress=False):
         new_data = pipe(data)
         if new_data is None:
             continue
-        label = label_gen(label)
+        label = label_gen(label - 1.0)
         example = numpy_to_tf_example(new_data, label)
         writer.write(example.SerializeToString())
         count += 1
         if count % 1000 == 0:
-            print(count)
+            logging.info('write to records: %s', count)
     writer.close()
 
 

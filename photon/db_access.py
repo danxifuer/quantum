@@ -1,6 +1,11 @@
 import pymysql
 import time
+import logging
 import numpy as np
+head = '%(asctime)-15s %(message)s'
+console = logging.StreamHandler()
+logging.basicConfig(level=logging.DEBUG, format=head, handlers=[console])
+
 
 FREQ_1D_FIELDS = ['open', 'high', 'low', 'close', 'volume']
 HOST = '0.0.0.0'
@@ -42,7 +47,7 @@ conn_manager = ConnManage(DATABASE)
 
 def get_ohlcv_by_date(start_date, end_date, code):
     sql = "select open, high, low, close, volume from get_price where trade_date >= '%s' and trade_date <= '%s' \
-            and code = '%s' order by trade_date asc"
+            and code = '%s' order by id asc"
     sql = sql % (start_date, end_date, code)
     ret = conn_manager.query_sql(sql)
     if len(ret) == 0:
@@ -52,7 +57,7 @@ def get_ohlcv_by_date(start_date, end_date, code):
 
 def get_ohlcv(code):
     sql = "select open, high, low, close, volume from get_price where \
-            and code = '%s' order by trade_date asc" % code
+            and code = '%s' order by id asc" % code
     ret = conn_manager.query_sql(sql)
     if len(ret) == 0:
         return None
@@ -63,7 +68,7 @@ def get_ohlcv_pre_ret(code, pre_days='2d'):
     if pre_days == '2d':
         sql = 'select open, high, low, close, volume, pre_two_day_returns ' \
               ' from get_price ' \
-              ' where code = "%s" order by trade_date asc' % code
+              ' where code = "%s" order by id asc' % code
     else:
         raise NotImplementedError
     ret = conn_manager.query_sql(sql)
@@ -73,10 +78,11 @@ def get_ohlcv_pre_ret(code, pre_days='2d'):
 
 
 def get_ohlcv_future_ret(code, future_days='1d'):
+    logging.info('get_ohlcv_future_ret, code: %s', code)
     assert future_days == '1d', 'NotImplementError'
     sql = 'select open, high, low, close, volume, future_one_day_returns ' \
           ' from get_price ' \
-          ' where code = "%s" order by trade_date asc' % code
+          ' where code = "%s" order by id asc' % code
     ret = conn_manager.query_sql(sql)
     if len(ret) == 0:
         return None

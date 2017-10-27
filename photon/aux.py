@@ -1,5 +1,6 @@
 # import tensorflow as tf
 import numpy as np
+import logging
 
 
 def _clip_by_std(mean, std, data):
@@ -90,12 +91,11 @@ class LabelGenerator:
 
     def __call__(self, returns):
         value = int(returns * 100)
-        print(value)
         if value > self._threshold:
             value = self._threshold
         elif value < - self._threshold:
             value = - self._threshold
-        return value
+        return value + self._threshold
 
 
 class Pipeline:
