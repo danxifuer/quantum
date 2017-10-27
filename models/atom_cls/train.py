@@ -1,15 +1,15 @@
-from data_process import get_train_data_iter, get_infer_data_iter
-from rnn_config import EPOCH, BATCH_SIZE, PREDICT_LEN, SEQ_LEN, INPUT_SIZE, RESTORE_PATH
+from data_process import read_tf_records
+from rnn_config import BATCH_SIZE, PREDICT_LEN, DECAY_STEP
 from model import get_model
 import logging
 import tensorflow as tf
+
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
-                    datefmt='%a, %d %b %Y %H:%M:%S',
+                    # datefmt='%a, %d %b %Y %H:%M:%S',
                     filename='./train.log',
                     filemode='w')
 logger = logging.getLogger(__name__)
-
 
 
 class Infer:
@@ -55,16 +55,13 @@ class Infer:
                 break
 
 
-data_p = tf.placeholder(dtype=tf.float32, shape=(None, SEQ_LEN, INPUT_SIZE))
-label_p = tf.placeholder(dtype=tf.int64, shape=(None, PREDICT_LEN))
-update, loss, acc, lr, softmax_op = get_model(data_p, label_p)
-data_iter = get_train_data_iter()
-
+data_batch, label_batch = read_tf_records(
+    '/home/daiab/machine_disk/code/quantum/photon/ohlcvr_ratio_norm.records', BATCH_SIZE)
+update, loss, acc, lr, softmax_op = get_model(data_batch, label_batch)
 iter_num = 0
 LOG_RATE = 40
 
-infer_class = Infer()
-
+# infer_class = Infer()
 with tf.Session() as sess:
     saver = tf.train.Saver()
     epoch = 0
@@ -72,28 +69,23 @@ with tf.Session() as sess:
     # saver.restore(sess, RESTORE_PATH)
     total_loss = 0
     total_acc = 0
+    sess.run(tf.global_variables_initializer())
+    coord = tf.train.Coordinator()
+    threads = tf.train.start_queue_runners(sess=sess, coord=coord)
     while True:
-        try:
-            batch_data, batch_label = data_iter.next()
-        except StopIteration:
-            infer_class.validate(sess, softmax_op)
-            data_iter.reset()
-            epoch += 1
-            logger.info('epoch == %d' % epoch)
-            if epoch >= 5:
-                saver.save(sess, save_path=RESTORE_PATH)
-            if epoch >= EPOCH:
-                break
-            batch_data, batch_label = data_iter.next()
-        _, loss_value, acc_value, lr_value = sess.run([update, loss, acc, lr],
-                                                      feed_dict={data_p: batch_data,
-                                                                 label_p: batch_label})
+
+        _, loss_value, acc_value, lr_value = sess.run([update, loss, acc, lr])
         total_loss += loss_value
         total_acc += acc_value
         if iter_num % LOG_RATE == 0:
-            logger.info('{}#{}; loss: {}; acc: {}; lr: {}'.format(epoch,
-                                                                  iter_num, total_loss / LOG_RATE,
-                                                                  total_acc / (LOG_RATE * BATCH_SIZE * PREDICT_LEN),
-                                                                  lr_value))
+            logger.info('{}#{}; loss: {:.6f}; acc: {:.6f}; lr: {:.8f}'.format(epoch,
+                                                                              iter_num, total_loss / LOG_RATE,
+                                                                              total_acc / (
+                                                                              LOG_RATE * BATCH_SIZE * PREDICT_LEN),
+                                                                              lr_value))
             total_acc = total_loss = 0
+        if iter_num > DECAY_STEP:
+            break
         iter_num += 1
+    coord.request_stop()
+    coord.join(threads)

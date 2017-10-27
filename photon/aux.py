@@ -72,7 +72,7 @@ class RatioNorm(Norm):
             self.func = lambda x: x
 
     def __call__(self, data, **kwargs):
-        ret = np.empty(shape=(data.shape[0], 7))
+        ret = np.empty(shape=(data.shape[0], 7), dtype=np.float32)
         ret[:, 0] = self.func(data[:, self.idx_map['close']] / data[:, self.idx_map['open']])
         ret[:, 1] = self.func(data[:, self.idx_map['high']] / data[:, self.idx_map['open']])
         ret[:, 2] = self.func(data[:, self.idx_map['low']] / data[:, self.idx_map['open']])

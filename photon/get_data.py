@@ -5,11 +5,12 @@ import tensorflow as tf
 import logging
 
 
-def get_ohlcvr_and_shuffle_idx(use_days, remove_head_num=10):
+def get_ohlcvr_and_shuffle_idx(use_days, remove_head_num=10, test_write=False):
     code_list = get_code(greater_days=200)
     all_data = []
-    # TODO: delete this
-    # code_list = code_list[:3]
+    if test_write:
+        logging.info('test_write just get some code')
+        code_list = code_list[:3]
     query_count = 0
     for code in code_list:
         tmp = get_ohlcv_future_ret(code)
@@ -44,8 +45,8 @@ def numpy_to_tf_example(ndarray_data, label):
     }))
 
 
-def write_ohlcvr(use_days, rec_name, remove_head_num=10, compress=False):
-    dataset, idxs = get_ohlcvr_and_shuffle_idx(use_days, remove_head_num)
+def write_ohlcvr(use_days, rec_name, remove_head_num=10, compress=False, test_write=False):
+    dataset, idxs = get_ohlcvr_and_shuffle_idx(use_days, remove_head_num, test_write=test_write)
     if compress:
         option = tf.python_io.TFRecordOptions(tf.python_io.TFRecordCompressionType.GZIP)
     else:
@@ -62,6 +63,8 @@ def write_ohlcvr(use_days, rec_name, remove_head_num=10, compress=False):
         new_data = pipe(data)
         if new_data is None:
             continue
+        if new_data.dtype == np.float64:
+            new_data = new_data.astype(np.float32)
         label = label_gen(label - 1.0)
         example = numpy_to_tf_example(new_data, label)
         writer.write(example.SerializeToString())
@@ -72,7 +75,7 @@ def write_ohlcvr(use_days, rec_name, remove_head_num=10, compress=False):
 
 
 def _unit_write():
-    write_ohlcvr(30, 'ohlcvr_ratio_norm.records')
+    write_ohlcvr(30, 'ohlcvr_ratio_norm.records', test_write=False)
 
 
 if __name__ == '__main__':
