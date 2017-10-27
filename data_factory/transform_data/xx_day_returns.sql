@@ -1,4 +1,12 @@
 
+alter table `get_price` add column `future_one_day_returns` DOUBLE(15,10) DEFAULT NULL;
+alter table `get_price` add column `pre_two_day_returns` DOUBLE(15,10) DEFAULT NULL;
+alter table `get_price` add column `future_two_day_returns` DOUBLE(15,10) DEFAULT NULL;
+
+
+
+
+################ disprecated below ##################
  CREATE TABLE `pre_two_day_returns` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `close_return` DOUBLE(15,10) DEFAULT NULL,

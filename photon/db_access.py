@@ -13,8 +13,8 @@ class ConnManage:
     def __init__(self, database):
         self._time_interval = 60 * 5  # 5 min
         self._start_time = time.time()
-        self._host = 'localhost'
-        self._user = 'root'
+        self._host = '116.196.115.222'
+        self._user = 'daiab'
         self._passwd = 'asdf..12'
         self._database = database
         self._conn = self._create_conn()
@@ -52,13 +52,23 @@ def get_ohlcv(code):
     return conn_manager.query_sql(sql)
 
 
-def get_ohlcv_previous_returns(code, pre_days='2d'):
+def get_ohlcv_pre_ret(code, pre_days='2d'):
     if pre_days == '2d':
-        sql = 'select p.open, p.high, p.low, p.close, p.volume, r.close_return from get_price as p ' \
-              ' join pre_two_day_returns as r on where r.trade_date = p.trade_date and ' \
-              ' code = "%s" order by p.trade_date asc' % code
+        sql = 'select p.open, p.high, p.low, p.close, p.volume, r.close_return ' \
+              ' from get_price as p ' \
+              ' join pre_two_day_returns as r on r.trade_date = p.trade_date ' \
+              ' where p.code = "%s" order by p.trade_date asc' % code
     else:
         raise NotImplementedError
+    return conn_manager.query_sql(sql)
+
+
+def get_ohlcv_future_ret(code, future_days='1d'):
+    assert future_days == '1d', 'NotImplementError'
+    sql = 'select p.open, p.high, p.low, p.close, p.volume, r.close_return ' \
+          ' from get_price as p ' \
+          ' join future_one_day_returns as r on r.trade_date = p.trade_date ' \
+          ' where p.code = "%s" order by p.trade_date asc' % code
     return conn_manager.query_sql(sql)
 
 
@@ -83,6 +93,11 @@ def get_code(from_date=None, end_date=None, greater_days=200):
         sql += ' and from_date >= "%s" ' % from_date
     if end_date:
         sql += ' and end_date <= "%s" ' % from_date
-    return conn_manager.query_sql(sql)
+    code_list = conn_manager.query_sql(sql)
+    return [c[0] for c in code_list]
 
 
+if __name__ == '__main__':
+    code_list = get_code()
+    print(code_list[0])
+    # print(get_ohlcv_future_ret(code_list[0]))
