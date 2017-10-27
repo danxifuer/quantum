@@ -19,8 +19,11 @@ def read_tf_records(tfrecords, batch_size, capacity=50):
     data = tf.decode_raw(features['data'], tf.float32)
     data = tf.reshape(data, (30, 7))
     label = features['label']
-    data_batch, label_batch = tf.train.batch([data, label], batch_size=batch_size,
-                                             capacity=capacity, enqueue_many=False)
+    data_batch, label_batch = tf.train.batch([data, label],
+                                             num_threads=8,
+                                             batch_size=batch_size,
+                                             capacity=capacity,
+                                             enqueue_many=False)
     return data_batch, label_batch
 
 
