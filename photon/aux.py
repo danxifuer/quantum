@@ -1,6 +1,7 @@
 # import tensorflow as tf
 import numpy as np
 import logging
+# import tensorflow as tf
 
 
 def _clip_by_std(mean, std, data):
