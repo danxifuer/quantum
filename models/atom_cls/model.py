@@ -88,22 +88,11 @@ def get_model(batch_data, batch_label, is_train=True):
         cell = tf.nn.rnn_cell.DropoutWrapper(cell, output_keep_prob=DROPOUT_KEEP)
         cell_list.append(cell)
     multi_cell = tf.contrib.rnn.MultiRNNCell(cell_list)
-    # batch_data = fully_connected(batch_data,
-    #                              num_outputs=INPUT_FC_NUM_OUPUT,
-    #                              activation_fn=None)
     output, state = tf.nn.dynamic_rnn(multi_cell,
                                       inputs=batch_data,
                                       dtype=tf.float32,
                                       time_major=False)
     output = output[:, -PREDICT_LEN:, :]
-    # batch_data = tf.transpose(batch_data, [1, 0, 2])
-    # batch_data = tf.unstack(batch_data, axis=0)
-    # encoder_outputs, encoder_state = tf.nn.static_rnn(multi_cell,
-    #                                                   inputs=batch_data,
-    #                                                   dtype=tf.float32)
-    # output = encoder_outputs[-PREDICT_LEN:]
-    # output = tf.stack(output, axis=0)
-    # output = tf.transpose(output, [1, 0, 2])
     print('lstm output shape: %s' % output.get_shape())
     output_reshape = tf.reshape(output, shape=(-1, HIDDEN_UNITS))
     # fc_output_0 = fully_connected(inputs=output_reshape,
@@ -112,23 +101,10 @@ def get_model(batch_data, batch_label, is_train=True):
     logits = fully_connected(output_reshape,
                              num_outputs=NUM_CLASSES,
                              activation_fn=None)
-
     softmax_op = tf.nn.softmax(logits)
     if not is_train:
         return softmax_op
-    # logits = tf.clip_by_value(logits, 1e-8, 0.95)
-    # reshaped_label = tf.reshape(batch_label, shape=(-1,))
-    # one_hot_label = tf.one_hot(reshaped_label, depth=2)
-    # print('one_hot_label shape: %s' % one_hot_label.shape)
-    acc = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(logits, axis=1), batch_label), tf.int64))
-    # cross_entropy = tf.nn.softmax_cross_entropy_with_logits(
-    #     labels=tf.multiply(one_hot_label, np.array([[0.97, 1.0]])),
-    #     logits=logits)
-    # cross_entropy = tf.nn.softmax_cross_entropy_with_logits(
-    #     labels=one_hot_label,
-    #     logits=tf.multiply(logits, np.array([[1.0, 0.95]])))
-    # cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=one_hot_label,
-    #                                                         logits=logits)
+    acc = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(logits, axis=1), batch_label), tf.float32))
     cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=batch_label, logits=logits)
     loss = tf.reduce_mean(cross_entropy)
 

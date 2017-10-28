@@ -1,5 +1,5 @@
 from data_process import read_tf_records
-from rnn_config import BATCH_SIZE, PREDICT_LEN, DECAY_STEP
+from rnn_config import BATCH_SIZE, PREDICT_LEN, DECAY_STEP, TRAIN_DATA_PATH
 from model import get_model
 import logging
 import tensorflow as tf
@@ -55,8 +55,7 @@ class Infer:
                 break
 
 
-data_batch, label_batch = read_tf_records(
-    '/home/daiab/machine_disk/code/quantum/photon/ohlcvr_ratio_norm.records', BATCH_SIZE)
+data_batch, label_batch = read_tf_records(TRAIN_DATA_PATH, BATCH_SIZE)
 update, loss, acc, lr, softmax_op = get_model(data_batch, label_batch)
 iter_num = 0
 LOG_RATE = 40

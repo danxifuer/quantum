@@ -55,6 +55,8 @@ def write_ohlcvr(use_days, rec_name, remove_head_num=10, compress=False, test_wr
     writer = tf.python_io.TFRecordWriter(rec_name, options=option)
     label_gen = LabelGenerator(40)
     pipe = Pipeline()
+    max_label = 0
+    min_label = 1000
     for idx in idxs:
         ori_data = dataset[idx[0]][idx[1]: idx[2]]
         # TODO: filter chain, norm_data, generate label
@@ -71,6 +73,11 @@ def write_ohlcvr(use_days, rec_name, remove_head_num=10, compress=False, test_wr
         count += 1
         if count % 1000 == 0:
             logging.info('write to records: %s', count)
+        if label > max_label:
+            max_label = label
+        elif label < min_label:
+            min_label = label
+    logging.info('total write %s samples, max_label: %s, min_label: %s', count, max_label, min_label)
     writer.close()
 
 

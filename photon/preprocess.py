@@ -29,7 +29,7 @@ class Norm:
 
 class NaNFilter(Filter):
     def __call__(self, data):
-        if np.all(np.isfinite(data)):
+        if not np.all(np.isfinite(data)):
             logging.info('discovery some data nan or other')
             return None
         return data
