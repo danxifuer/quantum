@@ -125,7 +125,7 @@ def get_model(batch_data, batch_label, is_train=True):
                                    end_learning_rate=END_LR,
                                    decay_steps=DECAY_STEP,
                                    power=0.6)
-    # opt = tf.train.MomentumOptimizer(lr, 0.9)
-    opt = tf.train.AdamOptimizer(lr)
+    opt = tf.train.MomentumOptimizer(lr, 0.9)
+    # opt = tf.train.AdamOptimizer(lr)
     update = opt.apply_gradients(zip(clipped_gradients, trainable_vars), global_step=global_step)
     return update, loss, acc, lr, softmax_op
