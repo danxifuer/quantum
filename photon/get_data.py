@@ -5,7 +5,11 @@ import tensorflow as tf
 import logging
 
 
-def get_ohlcvr_and_shuffle_idx(use_days, remove_head_num=10, test_write=False):
+def get_ohlcvr_and_shuffle_idx(use_days,
+                               from_date='2008-01-01',
+                               end_date='2017-07-01',
+                               remove_head_num=10,
+                               test_write=False):
     code_list = get_code(greater_days=200)
     all_data = []
     if test_write:
@@ -13,7 +17,7 @@ def get_ohlcvr_and_shuffle_idx(use_days, remove_head_num=10, test_write=False):
         code_list = code_list[:3]
     query_count = 0
     for code in code_list:
-        tmp = get_ohlcv_future_ret(code, '2006-01-04', '2017-07-01')
+        tmp = get_ohlcv_future_ret(code, from_date, end_date)
         if tmp.shape[0] <= (remove_head_num + use_days + 5):  # +5 is avoid error
             continue
         query_count += 1
@@ -45,8 +49,18 @@ def numpy_to_tf_example(ndarray_data, label):
     }))
 
 
-def write_ohlcvr(use_days, rec_name, remove_head_num=10, compress=False, test_write=False):
-    dataset, idxs = get_ohlcvr_and_shuffle_idx(use_days, remove_head_num, test_write=test_write)
+def write_ohlcvr(use_days,
+                 rec_name,
+                 from_date='2008-01-01',
+                 end_date='2017-07-01',
+                 remove_head_num=10,
+                 compress=False,
+                 test_write=False):
+    dataset, idxs = get_ohlcvr_and_shuffle_idx(use_days,
+                                               from_date=from_date,
+                                               end_date=end_date,
+                                               remove_head_num=remove_head_num,
+                                               test_write=test_write)
     if compress:
         option = tf.python_io.TFRecordOptions(tf.python_io.TFRecordCompressionType.GZIP)
     else:
@@ -82,7 +96,7 @@ def write_ohlcvr(use_days, rec_name, remove_head_num=10, compress=False, test_wr
 
 
 def _unit_write():
-    write_ohlcvr(30, 'ohlcvr_ratio_norm.records', test_write=False)
+    write_ohlcvr(30, rec_name='ohlcvr_ratio_norm.records', test_write=False)
 
 
 if __name__ == '__main__':

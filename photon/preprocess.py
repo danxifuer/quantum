@@ -75,7 +75,7 @@ class RatioNorm(Norm):
     def __init__(self, idx_map, use_log1p=True):
         self.idx_map = idx_map
         if use_log1p:
-            self.func = np.log1p
+            self.func = np.log
         else:
             self.func = lambda x: x
 
@@ -98,9 +98,11 @@ class LabelGenerator:
         self._threshold = int(self.num_classes / 2)
 
     def __call__(self, returns):
+        if returns < 0.0:
+            returns -= 0.00999
         value = int(returns * 100)
-        if value > self._threshold:
-            value = self._threshold
+        if value > self._threshold - 1:
+            value = self._threshold - 1
         elif value < - self._threshold:
             value = - self._threshold
         return value + self._threshold
@@ -124,7 +126,10 @@ class Pipeline:
 
 
 if __name__ == '__main__':
-    test_data = np.arange(25).reshape(5, 5) + 1
-    print(test_data)
-    pipe = Pipeline()
-    print(pipe(test_data))
+    # test_data = np.arange(25).reshape(5, 5) + 1
+    # print(test_data)
+    # pipe = Pipeline()
+    # print(pipe(test_data))
+    label_gen = LabelGenerator(40)
+    for i in np.arange(-0.4, 0.4, 0.001):
+        print('%s: %s' %(i, label_gen(i)))
