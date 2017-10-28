@@ -13,7 +13,7 @@ def get_ohlcvr_and_shuffle_idx(use_days, remove_head_num=10, test_write=False):
         code_list = code_list[:3]
     query_count = 0
     for code in code_list:
-        tmp = get_ohlcv_future_ret(code)
+        tmp = get_ohlcv_future_ret(code, '2006-01-04', '2017-07-01')
         if tmp.shape[0] <= (remove_head_num + use_days + 5):  # +5 is avoid error
             continue
         query_count += 1

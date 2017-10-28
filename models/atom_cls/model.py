@@ -92,9 +92,9 @@ def get_model(batch_data, batch_label, is_train=True):
                                       inputs=batch_data,
                                       dtype=tf.float32,
                                       time_major=False)
-    output = output[:, -PREDICT_LEN:, :]
+    # output = output[:, -PREDICT_LEN:, :]
     print('lstm output shape: %s' % output.get_shape())
-    output_reshape = tf.reshape(output, shape=(-1, HIDDEN_UNITS))
+    output_reshape = tf.reshape(output, shape=(-1, HIDDEN_UNITS * SEQ_LEN))
     # fc_output_0 = fully_connected(inputs=output_reshape,
     #                               num_outputs=FC_NUM_OUTPUT,
     #                               normalizer_fn=tf.contrib.layers.batch_norm)

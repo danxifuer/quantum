@@ -1,11 +1,10 @@
 import tensorflow as tf
-from rnn_config import *
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-def read_tf_records(tfrecords, batch_size, capacity=50):
+def read_tf_records(tfrecords, batch_size, capacity=300):
     if not isinstance(tfrecords, (tuple, list)):
         tfrecords = [tfrecords]
     filename_queue = tf.train.string_input_producer(tfrecords,

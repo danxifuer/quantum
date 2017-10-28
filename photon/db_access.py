@@ -76,12 +76,13 @@ def get_ohlcv_pre_ret(code, pre_days='2d'):
     return np.array(ret, dtype=np.float32)
 
 
-def get_ohlcv_future_ret(code, future_days='1d'):
+def get_ohlcv_future_ret(code, from_date, end_date, future_days='1d'):
     logging.info('get_ohlcv_future_ret, code: %s', code)
     assert future_days == '1d', 'NotImplementError'
     sql = 'select open, high, low, close, volume, future_one_day_returns ' \
           ' from get_price ' \
-          ' where code = "%s" order by id asc' % code
+          ' where code = "%s" and trade_date >= "%s" and trade_date <= "%s" ' \
+          ' order by id asc' % (code, from_date, end_date)
     ret = conn_manager.query_sql(sql)
     if len(ret) == 0:
         return None
