@@ -56,7 +56,7 @@ def get_ohlcv_by_date(start_date, end_date, code):
 
 def get_ohlcv(code):
     sql = "select open, high, low, close, volume from get_price where \
-            and code = '%s' order by id asc" % code
+            code = '%s' order by id asc" % code
     ret = conn_manager.query_sql(sql)
     if len(ret) == 0:
         return None
