@@ -67,7 +67,7 @@ def write_ohlcvr(use_days,
         option = None
     count = 0
     writer = tf.python_io.TFRecordWriter(rec_name, options=option)
-    label_gen = LabelGenerator(40)
+    label_gen = LabelGenerator(20)
     pipe = Pipeline()
     max_label = 0
     min_label = 1000

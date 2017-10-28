@@ -81,10 +81,10 @@ def get_model(batch_data, batch_label, is_train=True):
         cell = _single_cell(HIDDEN_UNITS,
                             CELL_TYPE,
                             residual_connection=residual_connection)
-        if i == 0:
-            cell = tf.contrib.rnn.AttentionCellWrapper(cell,
-                                                       attn_length=ATTN_LENGTH,
-                                                       state_is_tuple=True)
+        # if i == 0:
+        #     cell = tf.contrib.rnn.AttentionCellWrapper(cell,
+        #                                                attn_length=ATTN_LENGTH,
+        #                                                state_is_tuple=True)
         cell = tf.nn.rnn_cell.DropoutWrapper(cell, output_keep_prob=DROPOUT_KEEP)
         cell_list.append(cell)
     multi_cell = tf.contrib.rnn.MultiRNNCell(cell_list)
