@@ -55,10 +55,10 @@ def train():
             if i % LOG_INTERVAL == 0:
                 cur_loss = total_loss / BATCH_SIZE / LOG_INTERVAL
                 logging.info('%d # %d loss %.2f, ppl %.2f, lr %.5f',
-                             epoch, i, cur_loss, math.exp(cur_loss), trainer.learning_rate)
+                             epoch, i, cur_loss, math.exp(cur_loss), trainer._optimizer.lr)
                 total_loss = 0.0
         model.collect_params().save(RESTORE_PATH)
-        trainer.set_learning_rate(trainer.learning_rate * 0.9)
+        trainer._optimizer.lr *= 0.9
 
 
 if __name__ == '__main__':
