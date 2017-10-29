@@ -58,6 +58,7 @@ lr_decay = LRDecay(LR, END_LR, 0.6, DECAY_STEP)
 def train():
     for epoch in range(EPOCH):
         total_loss = 0.0
+        total_acc = 0.0
         start_time = time.time()
         hidden = model.begin_state(func=mx.nd.zeros, batch_size=BATCH_SIZE, ctx=context)
         for i in range(ITER_NUM_EPCOH):
@@ -75,12 +76,15 @@ def train():
 
             trainer.step(BATCH_SIZE)
             total_loss += mx.nd.sum(L).asscalar()
+            total_acc += mx.nd.sum(mx.nd.equal(mx.nd.argmax(output, axis=1), target)).asscalar()
 
             if i % LOG_INTERVAL == 0:
                 cur_loss = total_loss / BATCH_SIZE / LOG_INTERVAL
-                logger.info('%d # %d loss %.5f, ppl %.5f, lr %.5f',
-                            epoch, i, cur_loss, math.exp(cur_loss), trainer._optimizer.lr)
+                cur_acc = total_acc / BATCH_SIZE / LOG_INTERVAL
+                logger.info('%d # %d loss %.5f, ppl %.5f, lr %.5f, acc %.5f',
+                            epoch, i, cur_loss, math.exp(cur_loss), trainer._optimizer.lr, cur_acc)
                 total_loss = 0.0
+                total_acc = 0.0
             trainer._optimizer.lr = lr_decay.lr
         model.collect_params().save(RESTORE_PATH)
 
