@@ -5,7 +5,7 @@ alter table `get_price` add column `future_two_day_returns` DOUBLE(15,10) DEFAUL
 
 
 
- CREATE TABLE `norm_data_across_stock` (
+CREATE TABLE `norm_data_across_stock` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `h_o` DOUBLE(15,10) DEFAULT NULL,
   `l_o` DOUBLE(15,10) DEFAULT NULL,
@@ -21,6 +21,7 @@ alter table `get_price` add column `future_two_day_returns` DOUBLE(15,10) DEFAUL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 ALTER  TABLE  `norm_data_across_stock`  ADD  INDEX index_name (`code`,  `trade_date`);
+alter table `norm_data_across_stock` add column `future_one_day_returns` DOUBLE(15,10) DEFAULT NULL;
 
 
 

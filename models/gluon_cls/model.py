@@ -10,22 +10,22 @@ class RNNModel(gluon.Block):
                  num_embed,
                  num_hidden,
                  seq_len, num_layers,
-                 dropout=0.5,
+                 dropout=0.0,
                  **kwargs):
         super(RNNModel, self).__init__(**kwargs)
         with self.name_scope():
             self.drop = nn.Dropout(dropout)
             if mode == 'rnn_relu':
-                self.rnn = rnn.RNN(num_hidden, 'relu', num_layers, layout='NTC', dropout=dropout,
-                                   input_size=num_embed)
+                self.rnn = rnn.RNN(num_hidden, activation='relu', num_layers=num_layers,
+                                   layout='NTC', dropout=dropout, input_size=num_embed)
             elif mode == 'rnn_tanh':
-                self.rnn = rnn.RNN(num_hidden, num_layers, layout='NTC', dropout=dropout,
+                self.rnn = rnn.RNN(num_hidden, num_layers=num_layers, layout='NTC', dropout=dropout,
                                    input_size=num_embed)
             elif mode == 'lstm':
-                self.rnn = rnn.LSTM(num_hidden, num_layers, layout='NTC', dropout=dropout,
+                self.rnn = rnn.LSTM(num_hidden, num_layers=num_layers, layout='NTC', dropout=dropout,
                                     input_size=num_embed)
             elif mode == 'gru':
-                self.rnn = rnn.GRU(num_hidden, num_layers, layout='NTC', dropout=dropout,
+                self.rnn = rnn.GRU(num_hidden, num_layers=num_layers, layout='NTC', dropout=dropout,
                                    input_size=num_embed)
             else:
                 raise ValueError("Invalid mode %s. Options are rnn_relu, "

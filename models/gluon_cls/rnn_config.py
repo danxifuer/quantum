@@ -9,7 +9,7 @@ NUM_CLASSES = 20
 # INPUT_FC_NUM_OUPUT = 16
 NUM_RESIDUAL_LAYERS = NUM_LAYERS - 1
 ATTN_LENGTH = 10
-DROPOUT = 0.1
+DROPOUT = 0.0
 EPOCH = 30
 # EXAMPLES = 5e6
 EXAMPLES = 4030508
@@ -21,7 +21,7 @@ INPUT_SIZE = 7
 CELL_TYPE = 'RNN'
 TRAIN_DATA_PATH = '/home/daiab/machine_disk/code/quantum/photon/ohlcvr_ratio_norm.rec'
 # INFER_DATA_PATH = ''
-RESTORE_PATH = '/home/daiab/machine_disk/code/quantum/models/gluon_cls/save/model'
+RESTORE_PATH = '/home/daiab/machine_disk/code/quantum/models/gluon_cls/save/mx_model'
 
 
 # infer

@@ -7,6 +7,13 @@ import logging
 from rnn_config import *
 from dataiter import DataIter
 
+logging.basicConfig(level=logging.DEBUG,
+                    format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
+                    # datefmt='%a, %d %b %Y %H:%M:%S',
+                    filename='./train.log',
+                    filemode='w')
+logger = logging.getLogger(__name__)
+
 
 def detach(hidden):
     if isinstance(hidden, (tuple, list)):
@@ -54,8 +61,8 @@ def train():
 
             if i % LOG_INTERVAL == 0:
                 cur_loss = total_loss / BATCH_SIZE / LOG_INTERVAL
-                logging.info('%d # %d loss %.2f, ppl %.2f, lr %.5f',
-                             epoch, i, cur_loss, math.exp(cur_loss), trainer._optimizer.lr)
+                logger.info('%d # %d loss %.5f, ppl %.5f, lr %.5f',
+                            epoch, i, cur_loss, math.exp(cur_loss), trainer._optimizer.lr)
                 total_loss = 0.0
         model.collect_params().save(RESTORE_PATH)
         trainer._optimizer.lr *= 0.9
