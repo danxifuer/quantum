@@ -20,6 +20,7 @@ class DataIter:
         while True:
             if self.q.qsize() >= self.pre_fetch_num:
                 time.sleep(0.01)
+                continue
             batch_data = []
             batch_label = []
             for _ in range(self.batch_size):
