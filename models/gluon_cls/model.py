@@ -1,5 +1,6 @@
 from mxnet import gluon
 from mxnet.gluon import nn, rnn
+from rnn_config import NUM_CLASSES
 
 
 class RNNModel(gluon.Block):
@@ -30,7 +31,7 @@ class RNNModel(gluon.Block):
                 raise ValueError("Invalid mode %s. Options are rnn_relu, "
                                  "rnn_tanh, lstm, and gru" % mode)
 
-            self.fc = nn.Dense(vocab_size, in_units=num_hidden * seq_len)
+            self.fc = nn.Dense(NUM_CLASSES, in_units=num_hidden * seq_len)
             self.num_hidden = num_hidden
             self.seq_len = seq_len
 
