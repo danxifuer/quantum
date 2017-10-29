@@ -63,6 +63,8 @@ def train():
         hidden = model.begin_state(func=mx.nd.zeros, batch_size=BATCH_SIZE, ctx=context)
         for i in range(ITER_NUM_EPCOH):
             data, target = data_iter.next()
+            data = mx.nd.array(data, context)
+            target = mx.nd.array(target, context)
             hidden = detach(hidden)
             with autograd.record():
                 output, hidden = model(data, hidden)
