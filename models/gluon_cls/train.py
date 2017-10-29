@@ -3,20 +3,9 @@ import math
 import mxnet as mx
 from mxnet import gluon, autograd
 import model
+import logging
 from rnn_config import *
 from dataiter import DataIter
-
-context = mx.gpu(0)
-model = model.RNNModel(mode='rnn_tanh', num_embed=INPUT_SIZE,
-                       num_hidden=HIDDEN_UNITS, seq_len=SEQ_LEN,
-                       num_layers=NUM_LAYERS, dropout=DROPOUT)
-model.collect_params().initialize(mx.init.Xavier(), ctx=context)
-trainer = gluon.Trainer(model.collect_params(), 'sgd',
-                        {'learning_rate': LR,
-                         'momentum': 0,
-                         'wd': 0})
-loss = gluon.loss.SoftmaxCrossEntropyLoss()
-LOG_INTERVAL = 40
 
 
 def detach(hidden):
@@ -27,8 +16,19 @@ def detach(hidden):
     return hidden
 
 
+LOG_INTERVAL = 40
 data_iter = DataIter(TRAIN_DATA_PATH, BATCH_SIZE)
 CLIP = 0.2
+context = mx.gpu(0)
+model = model.RNNModel(mode='rnn_tanh', num_embed=INPUT_SIZE,
+                       num_hidden=HIDDEN_UNITS, seq_len=SEQ_LEN,
+                       num_layers=NUM_LAYERS, dropout=DROPOUT)
+model.collect_params().initialize(mx.init.Xavier(), ctx=context)
+trainer = gluon.Trainer(model.collect_params(), 'sgd',
+                        {'learning_rate': LR,
+                         'momentum': 0,
+                         'wd': 0})
+loss = gluon.loss.SoftmaxCrossEntropyLoss()
 
 
 def train():
@@ -54,10 +54,11 @@ def train():
 
             if i % LOG_INTERVAL == 0:
                 cur_loss = total_loss / BATCH_SIZE / LOG_INTERVAL
-                print('[Epoch %d Batch %d] loss %.2f, ppl %.2f' % (
-                    epoch, i, cur_loss, math.exp(cur_loss)))
+                logging.info('%d # %d loss %.2f, ppl %.2f, lr %.5f',
+                             epoch, i, cur_loss, math.exp(cur_loss), trainer.learning_rate)
                 total_loss = 0.0
         model.collect_params().save(RESTORE_PATH)
+        trainer.set_learning_rate(trainer.learning_rate * 0.9)
 
 
 if __name__ == '__main__':
