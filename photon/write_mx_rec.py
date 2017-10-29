@@ -48,7 +48,7 @@ def write_ohlcvr(use_days,
 
 
 def _unit_write():
-    write_ohlcvr(30, rec_name='ohlcvr_ratio_norm.rec', test_write=True)
+    write_ohlcvr(30, rec_name='ohlcvr_ratio_norm.rec', test_write=False)
 
 
 def _unit_read():

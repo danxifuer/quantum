@@ -1,4 +1,3 @@
-import mxnet as mx
 from mxnet import gluon
 from mxnet.gluon import nn, rnn
 
@@ -6,15 +5,15 @@ from mxnet.gluon import nn, rnn
 class RNNModel(gluon.Block):
     """A model with an encoder, recurrent layer, and a decoder."""
 
-    def __init__(self, mode, vocab_size,
-                 num_embed, num_hidden,
-                 num_layers, dropout=0.5,
-                 tie_weights=False, **kwargs):
+    def __init__(self, mode,
+                 num_embed,
+                 num_hidden,
+                 seq_len, num_layers,
+                 dropout=0.5,
+                 **kwargs):
         super(RNNModel, self).__init__(**kwargs)
         with self.name_scope():
             self.drop = nn.Dropout(dropout)
-            self.encoder = nn.Embedding(vocab_size, num_embed,
-                                        weight_initializer=mx.init.Uniform(0.1))
             if mode == 'rnn_relu':
                 self.rnn = rnn.RNN(num_hidden, 'relu', num_layers, dropout=dropout,
                                    input_size=num_embed)
@@ -31,20 +30,15 @@ class RNNModel(gluon.Block):
                 raise ValueError("Invalid mode %s. Options are rnn_relu, "
                                  "rnn_tanh, lstm, and gru" % mode)
 
-            if tie_weights:
-                self.decoder = nn.Dense(vocab_size, in_units=num_hidden,
-                                        params=self.encoder.params)
-            else:
-                self.decoder = nn.Dense(vocab_size, in_units=num_hidden)
-
+            self.fc = nn.Dense(vocab_size, in_units=num_hidden * seq_len)
             self.num_hidden = num_hidden
+            self.seq_len = seq_len
 
     def forward(self, inputs, hidden):
-        emb = self.drop(self.encoder(inputs))
-        output, hidden = self.rnn(emb, hidden)
+        output, hidden = self.rnn(inputs, hidden)
         print('model forward output %s' % output)
         output = self.drop(output)
-        decoded = self.decoder(output.reshape((-1, self.num_hidden)))
+        decoded = self.fc(output.reshape((-1, self.num_hidden * self.seq_len)))
         return decoded, hidden
 
     def begin_state(self, *args, **kwargs):
