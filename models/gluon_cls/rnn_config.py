@@ -19,11 +19,8 @@ LR = 0.04
 END_LR = 0.0002
 INPUT_SIZE = 7
 CELL_TYPE = 'RNN'
-# FILEDS = ['open', 'close', 'high', 'low', 'volume']
-# IDX = 1
-# DATA_PATH = '/home/daiab/machine_disk/code/Craft/rnn/share/all_data.pkl.2015-01-05_2017-09-13'
 TRAIN_DATA_PATH = '/home/daiab/machine_disk/code/quantum/photon/ohlcvr_ratio_norm.rec'
-# INFER_DATA_PATH = '/home/daiab/machine_disk/code/quantum/utils/val_data.pkl'
+# INFER_DATA_PATH = ''
 RESTORE_PATH = '/home/daiab/machine_disk/code/quantum/models/gluon_cls/save/model'
 
 
