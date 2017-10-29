@@ -16,16 +16,16 @@ class RNNModel(gluon.Block):
         with self.name_scope():
             self.drop = nn.Dropout(dropout)
             if mode == 'rnn_relu':
-                self.rnn = rnn.RNN(num_hidden, 'relu', num_layers, dropout=dropout,
+                self.rnn = rnn.RNN(num_hidden, 'relu', num_layers, layout='NTC', dropout=dropout,
                                    input_size=num_embed)
             elif mode == 'rnn_tanh':
-                self.rnn = rnn.RNN(num_hidden, num_layers, dropout=dropout,
+                self.rnn = rnn.RNN(num_hidden, num_layers, layout='NTC', dropout=dropout,
                                    input_size=num_embed)
             elif mode == 'lstm':
-                self.rnn = rnn.LSTM(num_hidden, num_layers, dropout=dropout,
+                self.rnn = rnn.LSTM(num_hidden, num_layers, layout='NTC', dropout=dropout,
                                     input_size=num_embed)
             elif mode == 'gru':
-                self.rnn = rnn.GRU(num_hidden, num_layers, dropout=dropout,
+                self.rnn = rnn.GRU(num_hidden, num_layers, layout='NTC', dropout=dropout,
                                    input_size=num_embed)
             else:
                 raise ValueError("Invalid mode %s. Options are rnn_relu, "
@@ -37,7 +37,6 @@ class RNNModel(gluon.Block):
 
     def forward(self, inputs, hidden):
         output, hidden = self.rnn(inputs, hidden)
-        print('model forward output %s' % output)
         output = self.drop(output)
         decoded = self.fc(output.reshape((-1, self.num_hidden * self.seq_len)))
         return decoded, hidden

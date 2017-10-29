@@ -27,7 +27,7 @@ class DataIter:
                     self.recordio.reset()
                     item = self.recordio.read()
                 header, data = mx.recordio.unpack(item)
-                array = np.frombuffer(data, np.float32)
+                array = np.frombuffer(data, np.float32).reshape(30, 7)
                 batch_data.append(array)
                 batch_label.append(header.label)
             batch_data = mx.nd.array(batch_data)
