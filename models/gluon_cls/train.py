@@ -48,12 +48,14 @@ model = model.RNNModel(mode='rnn_tanh', num_embed=INPUT_SIZE,
                        num_hidden=HIDDEN_UNITS, seq_len=SEQ_LEN,
                        num_layers=NUM_LAYERS, dropout=DROPOUT)
 model.collect_params().initialize(mx.init.Xavier(), ctx=context)
+model.collect_params().load(RESTORE_PATH, context)
 trainer = gluon.Trainer(model.collect_params(), 'sgd',
                         {'learning_rate': LR,
                          'momentum': 0.9,
                          'wd': 0.0})
 loss = gluon.loss.SoftmaxCrossEntropyLoss()
 lr_decay = LRDecay(LR, END_LR, 0.6, DECAY_STEP)
+
 
 def train():
     for epoch in range(EPOCH):

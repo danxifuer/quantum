@@ -10,7 +10,7 @@ class DataIter:
     def __init__(self, rec_file, batch_size):
         self.q = Queue()
         self.batch_size = batch_size
-        self.pre_fetch_num = batch_size * 5
+        self.pre_fetch_num = 100
         self.recordio = mx.recordio.MXRecordIO(rec_file, 'r')
         self.th = threading.Thread(target=self._load_data)
         self.th.daemon = True
