@@ -15,6 +15,23 @@ logging.basicConfig(level=logging.DEBUG,
 logger = logging.getLogger(__name__)
 
 
+class LRDecay:
+    def __init__(self, base_lr, end_lr, power, total_step):
+        self.base_lr = base_lr
+        self.end_lr = end_lr
+        self.cur_step = 0
+        self.total_step = total_step
+        self.power = power
+
+    @property
+    def lr(self):
+        self.cur_step += 1
+        lr = (1 - self.cur_step / self.total_step) ** self.power * (self.base_lr - self.end_lr) + self.end_lr
+        if lr < self.end_lr:
+            return self.end_lr
+        return lr
+
+
 def detach(hidden):
     if isinstance(hidden, (tuple, list)):
         hidden = [i.detach() for i in hidden]
@@ -33,10 +50,10 @@ model = model.RNNModel(mode='rnn_tanh', num_embed=INPUT_SIZE,
 model.collect_params().initialize(mx.init.Xavier(), ctx=context)
 trainer = gluon.Trainer(model.collect_params(), 'sgd',
                         {'learning_rate': LR,
-                         'momentum': 0,
-                         'wd': 0})
+                         'momentum': 0.9,
+                         'wd': 0.0})
 loss = gluon.loss.SoftmaxCrossEntropyLoss()
-
+lr_decay = LRDecay(LR, END_LR, 0.6, DECAY_STEP)
 
 def train():
     for epoch in range(EPOCH):
@@ -64,8 +81,8 @@ def train():
                 logger.info('%d # %d loss %.5f, ppl %.5f, lr %.5f',
                             epoch, i, cur_loss, math.exp(cur_loss), trainer._optimizer.lr)
                 total_loss = 0.0
+            trainer._optimizer.lr = lr_decay.lr
         model.collect_params().save(RESTORE_PATH)
-        trainer._optimizer.lr *= 0.9
 
 
 if __name__ == '__main__':

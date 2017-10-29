@@ -3,13 +3,14 @@ import threading
 import mxnet as mx
 import numpy as np
 import time
+from rnn_config import SEQ_LEN, INPUT_SIZE
 
 
 class DataIter:
     def __init__(self, rec_file, batch_size):
         self.q = Queue()
         self.batch_size = batch_size
-        self.pre_fetch_num = 10
+        self.pre_fetch_num = batch_size * 5
         self.recordio = mx.recordio.MXRecordIO(rec_file, 'r')
         self.th = threading.Thread(target=self._load_data)
         self.th.daemon = True
@@ -27,7 +28,7 @@ class DataIter:
                     self.recordio.reset()
                     item = self.recordio.read()
                 header, data = mx.recordio.unpack(item)
-                array = np.frombuffer(data, np.float32).reshape(30, 7)
+                array = np.frombuffer(data, np.float32).reshape(SEQ_LEN, INPUT_SIZE)
                 batch_data.append(array)
                 batch_label.append(header.label)
             batch_data = mx.nd.array(batch_data, mx.gpu(0))
