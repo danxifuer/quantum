@@ -1,4 +1,5 @@
 from mxnet import gluon
+import mxnet as mx
 from mxnet.gluon import nn, rnn
 from rnn_config import NUM_CLASSES
 
@@ -15,6 +16,8 @@ class RNNModel(gluon.Block):
         super(RNNModel, self).__init__(**kwargs)
         with self.name_scope():
             self.drop = nn.Dropout(dropout)
+            # self.emb = nn.Embedding(vocab_size, num_embed,
+            #                         weight_initializer=mx.init.Uniform(0.1))
             if mode == 'rnn_relu':
                 self.rnn = rnn.RNN(num_hidden, activation='relu', num_layers=num_layers,
                                    layout='NTC', dropout=dropout, input_size=num_embed)
