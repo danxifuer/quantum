@@ -30,8 +30,8 @@ class DataIter:
                 array = np.frombuffer(data, np.float32).reshape(30, 7)
                 batch_data.append(array)
                 batch_label.append(header.label)
-            batch_data = mx.nd.array(batch_data)
-            batch_label = mx.nd.array(batch_label)
+            batch_data = mx.nd.array(batch_data, mx.gpu(0))
+            batch_label = mx.nd.array(batch_label, mx.gpu(0))
             self.q.put((batch_data, batch_label))
 
     def next(self):
