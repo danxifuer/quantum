@@ -21,7 +21,7 @@ INPUT_SIZE = 7
 CELL_TYPE = 'rnn_tanh'
 TRAIN_DATA_PATH = '/home/daiab/machine_disk/code/quantum/photon/ohlcvr_ratio_norm.rec'
 # INFER_DATA_PATH = ''
-RESTORE_PATH = '/home/daiab/machine_disk/code/quantum/models/gluon_cls/save/mx_model'
+RESTORE_PATH = '/home/daiab/machine_disk/code/quantum/models/gluon_cls/save/mx_model.params'
 
 
 # infer
