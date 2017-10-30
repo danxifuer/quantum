@@ -52,7 +52,7 @@ model.collect_params().initialize(mx.init.Xavier(), ctx=context)
 trainer = gluon.Trainer(model.collect_params(), 'sgd',
                         {'learning_rate': LR,
                          'momentum': 0.9,
-                         'wd': 0.0})
+                         'wd': 0.00005})
 loss = gluon.loss.L2Loss()
 lr_decay = LRDecay(LR, END_LR, 0.6, DECAY_STEP)
 
