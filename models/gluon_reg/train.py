@@ -77,12 +77,12 @@ def train():
             gluon.utils.clip_global_norm(grads, CLIP * BATCH_SIZE)
 
             trainer.step(BATCH_SIZE)
-            total_loss += mx.nd.sum(L).asscalar()
+            total_loss += mx.nd.sum(mx.nd.sqrt(L)).asscalar()
 
             if i % LOG_INTERVAL == 0:
                 cur_loss = total_loss / BATCH_SIZE / LOG_INTERVAL
-                logger.info('%d # %d loss %.5f, ppl %.5f, lr %.5f',
-                            epoch, i, cur_loss, math.exp(cur_loss), trainer._optimizer.lr)
+                logger.info('%d # %d loss %.8f, lr %.5f',
+                            epoch, i, cur_loss, trainer._optimizer.lr)
                 total_loss = 0.0
             trainer._optimizer.lr = lr_decay.lr
         model.collect_params().save(RESTORE_PATH)
