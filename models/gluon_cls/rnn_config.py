@@ -2,7 +2,7 @@
 BATCH_SIZE = 512
 SEQ_LEN = 30
 PREDICT_LEN = 1
-NUM_LAYERS = 2
+NUM_LAYERS = 5
 HIDDEN_UNITS = 380
 # FC_NUM_OUTPUT = 16
 NUM_CLASSES = 20
@@ -18,7 +18,7 @@ DECAY_STEP = ITER_NUM_EPCOH * EPOCH
 LR = 0.04
 END_LR = 0.0002
 INPUT_SIZE = 7
-CELL_TYPE = 'RNN'
+CELL_TYPE = 'rnn_tanh'
 TRAIN_DATA_PATH = '/home/daiab/machine_disk/code/quantum/photon/ohlcvr_ratio_norm.rec'
 # INFER_DATA_PATH = ''
 RESTORE_PATH = '/home/daiab/machine_disk/code/quantum/models/gluon_cls/save/mx_model'

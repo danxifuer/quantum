@@ -20,7 +20,7 @@ class ConnManage:
         self._start_time = time.time()
         self._host = '116.196.115.222'
         self._user = 'daiab'
-        self._passwd = ''
+        self._passwd = 'asdf..12'
         self._database = database
         self._conn = self._create_conn()
 
@@ -81,6 +81,19 @@ def get_ohlcv_future_ret(code, from_date, end_date, future_days='1d'):
     assert future_days == '1d', 'NotImplementError'
     sql = 'select open, high, low, close, volume, future_one_day_returns ' \
           ' from get_price ' \
+          ' where code = "%s" and trade_date >= "%s" and trade_date <= "%s" ' \
+          ' order by id asc' % (code, from_date, end_date)
+    ret = conn_manager.query_sql(sql)
+    if len(ret) == 0:
+        return None
+    return np.array(ret, dtype=np.float32)
+
+
+def get_normed_ohlcv_future_ret(code, from_date, end_date, future_days='1d'):
+    logging.info('get_ohlcv_future_ret, code: %s', code)
+    assert future_days == '1d', 'NotImplementError'
+    sql = 'select h_o, l_o, c_o, o_c, h_c, l_c, volume, future_one_day_returns ' \
+          ' from norm_data_across_stock ' \
           ' where code = "%s" and trade_date >= "%s" and trade_date <= "%s" ' \
           ' order by id asc' % (code, from_date, end_date)
     ret = conn_manager.query_sql(sql)

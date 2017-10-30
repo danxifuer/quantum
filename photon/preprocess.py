@@ -125,6 +125,20 @@ class Pipeline:
         return data
 
 
+class PipelineNoNorm:
+    def __init__(self):
+        self.filters = [NaNFilter(),
+                        ContinueUpFilter(high_idx=0, low_idx=1)]  # h_o, l_o
+
+    def __call__(self, data):
+        data = data.copy()
+        for filter in self.filters:
+            data = filter(data)
+            if data is None:
+                return None
+        return data
+
+
 if __name__ == '__main__':
     # test_data = np.arange(25).reshape(5, 5) + 1
     # print(test_data)
