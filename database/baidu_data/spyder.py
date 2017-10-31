@@ -23,7 +23,7 @@ def parse_item(item, code):
     volume = kline['volume']
     ratio = kline['netChangeRatio'] / 100 + 1
     trade_date = datetime.datetime.strptime(str(time), '%Y%m%d')
-    return open, high, low, close, volume, code, trade_date, ratio
+    return open, high, low, close, volume, code, trade_date
 
 
 def get_code_data(code, timestamp, retry=10):
@@ -73,8 +73,8 @@ def write():
     # code_list = ['sz000517']sh
     code_list = map(_handle, code_list)
     sql_template = "insert into get_price " \
-                   " (open, high, low, close, volume, code, trade_date, ratio)" \
-                   " values (%s, %s, %s, %s, %s, '%s', '%s', %s)"
+                   " (open, high, low, close, volume, code, trade_date)" \
+                   " values (%s, %s, %s, %s, %s, '%s', '%s')"
     for i, code in enumerate(code_list):
         print('%s # %s' % (i, code))
         d = get_code_data(code, timestamp=TIMESTAMP)
