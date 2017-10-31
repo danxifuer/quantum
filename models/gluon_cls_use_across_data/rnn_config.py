@@ -5,7 +5,7 @@ PREDICT_LEN = 1
 NUM_LAYERS = 5
 HIDDEN_UNITS = 380
 # FC_NUM_OUTPUT = 16
-NUM_CLASSES = 20
+NUM_CLASSES = 10
 # INPUT_FC_NUM_OUPUT = 16
 NUM_RESIDUAL_LAYERS = NUM_LAYERS - 1
 ATTN_LENGTH = 10
@@ -19,7 +19,7 @@ LR = 0.04
 END_LR = 0.0002
 INPUT_SIZE = 7
 CELL_TYPE = 'rnn_tanh'
-TRAIN_DATA_PATH = '/home/daiab/machine_disk/code/quantum/photon/ohlcvr_from_normed_data_50_length.rec'
+TRAIN_DATA_PATH = '/home/daiab/machine_disk/code/quantum/photon/ohlcvr_from_norm_data_50_len_10_cls.rec'
 # INFER_DATA_PATH = ''
 RESTORE_PATH = '/home/daiab/machine_disk/code/quantum/models/gluon_cls_use_across_data/save/mx_model.params'
 

@@ -144,6 +144,6 @@ if __name__ == '__main__':
     # print(test_data)
     # pipe = Pipeline()
     # print(pipe(test_data))
-    label_gen = LabelGenerator(40)
+    label_gen = LabelGenerator(4)
     for i in np.arange(-0.4, 0.4, 0.001):
         print('%s: %s' %(i, label_gen(i)))

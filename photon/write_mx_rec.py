@@ -52,6 +52,7 @@ def write_ohlcvr_from_normed_data(use_days,
                                   from_date='2008-01-01',
                                   end_date='2017-07-01',
                                   remove_head_num=10,
+                                  class_num=20,
                                   test_write=False,
                                   regression=False):
     dataset, idxs = get_normed_ohlcvr_and_shuffled_idx(use_days,
@@ -64,7 +65,7 @@ def write_ohlcvr_from_normed_data(use_days,
     if regression:
         label_gen = lambda x: np.log1p(x)
     else:
-        label_gen = LabelGenerator(20)
+        label_gen = LabelGenerator(class_num)
     pipe = PipelineNoNorm()
     max_label = 0
     min_label = 1000
@@ -95,9 +96,14 @@ def write_ohlcvr_from_normed_data(use_days,
 
 def _unit_write(data_type):
     if data_type == 'standard_ohlcvr':
-        write_ohlcvr(30, rec_name='ohlcvr_ratio_norm.rec', test_write=False)
+        write_ohlcvr(30,
+                     rec_name='ohlcvr_ratio_norm.rec',
+                     test_write=False)
     elif data_type == 'across_normed_ohlcvr':
-        write_ohlcvr_from_normed_data(50, rec_name='ohlcvr_from_normed_data_50_length.rec', test_write=False)
+        write_ohlcvr_from_normed_data(50,
+                                      rec_name='ohlcvr_from_norm_data_50_len_10_cls.rec',
+                                      class_num=10,
+                                      test_write=False)
     elif data_type == 'across_normed_ohlcvr_regression':
         write_ohlcvr_from_normed_data(50,
                                       rec_name='ohlcvr_from_normed_data_for_reg_50_len.rec',
@@ -118,5 +124,5 @@ def _unit_read():
 
 
 if __name__ == '__main__':
-    _unit_write('across_normed_ohlcvr_regression')
+    _unit_write('across_normed_ohlcvr')
     # _unit_read()

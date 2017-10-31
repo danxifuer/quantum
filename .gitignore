@@ -9,3 +9,4 @@
 *.records
 *.tfrecords
 *.rec
+*.params
