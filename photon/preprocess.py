@@ -97,7 +97,19 @@ class LabelGenerator:
         self.num_classes = num_classes
         self._threshold = int(self.num_classes / 2)
 
+    def handle(self, ret):
+        if ret < 0.0:
+            ret -= 0.00999
+        value = int(ret * 100)
+        if value > self._threshold - 1:
+            value = self._threshold - 1
+        elif value < - self._threshold:
+            value = - self._threshold
+        return value + self._threshold
+
     def __call__(self, returns):
+        if isinstance(returns, (list, tuple, np.ndarray)):
+            return list(map(self.handle, returns))
         if returns < 0.0:
             returns -= 0.00999
         value = int(returns * 100)

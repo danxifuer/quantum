@@ -48,7 +48,7 @@ model = model.RNNModel(mode=CELL_TYPE, num_embed=INPUT_SIZE,
                        num_hidden=HIDDEN_UNITS, seq_len=SEQ_LEN,
                        num_layers=NUM_LAYERS, dropout=DROPOUT)
 model.collect_params().initialize(mx.init.Xavier(), ctx=context)
-# model.collect_params().load(RESTORE_PATH, context)
+model.collect_params().load(RESTORE_PATH, context)
 trainer = gluon.Trainer(model.collect_params(), 'sgd',
                         {'learning_rate': LR,
                          'momentum': 0.9,

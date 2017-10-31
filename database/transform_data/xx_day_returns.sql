@@ -1,9 +1,4 @@
 
-alter table `get_price` add column `future_one_day_returns` DOUBLE(15,10) DEFAULT NULL;
-alter table `get_price` add column `pre_two_day_returns` DOUBLE(15,10) DEFAULT NULL;
-alter table `get_price` add column `future_two_day_returns` DOUBLE(15,10) DEFAULT NULL;
-
-
 
 CREATE TABLE `norm_data_across_stock` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -13,6 +8,7 @@ CREATE TABLE `norm_data_across_stock` (
   `o_c` DOUBLE(15,10) DEFAULT NULL,
   `h_c` DOUBLE(15,10) DEFAULT NULL,
   `l_c` DOUBLE(15,10) DEFAULT NULL,
+  `fu_one_ret` DOUBLE(15,10) DEFAULT NULL,
   `volume` DOUBLE(15,10) DEFAULT NULL,
   `code` varchar(32) NOT NULL,
   `trade_date` datetime NOT NULL,
@@ -21,42 +17,4 @@ CREATE TABLE `norm_data_across_stock` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 ALTER  TABLE  `norm_data_across_stock`  ADD  INDEX index_name (`code`,  `trade_date`);
-alter table `norm_data_across_stock` add column `future_one_day_returns` DOUBLE(15,10) DEFAULT NULL;
-
-
-
-################ disprecated below ##################
- CREATE TABLE `pre_two_day_returns` (
-  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `close_return` DOUBLE(15,10) DEFAULT NULL,
-  `code` varchar(32) DEFAULT NULL,
-  `create_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `trade_date` datetime DEFAULT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-
-
- CREATE TABLE `future_two_day_returns` (
-  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `close_return` DOUBLE(15,10) DEFAULT NULL,
-  `code` varchar(32) DEFAULT NULL,
-  `create_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `trade_date` datetime DEFAULT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-
-
-CREATE TABLE `future_one_day_returns` (
-  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `close_return` DOUBLE(15,10) DEFAULT NULL,
-  `code` varchar(32) DEFAULT NULL,
-  `create_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `trade_date` datetime DEFAULT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-
-
-ALTER  TABLE  `pre_two_day_returns`  ADD  INDEX index_name (`code`,  `trade_date`);
-ALTER  TABLE  `future_two_day_returns`  ADD  INDEX index_name (`code`,  `trade_date`);
-ALTER  TABLE  `future_one_day_returns`  ADD  INDEX index_name (`code`,  `trade_date`);
 

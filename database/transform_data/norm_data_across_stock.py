@@ -1,49 +1,12 @@
-import time
-import pymysql
+from database import ConnManage
 import numpy as np
 
-DATABASE = 'rqalpha'
-
-
-class ConnManage:
-    def __init__(self, database):
-        self._time_interval = 60 * 5  # 5 min
-        self._start_time = time.time()
-        self._host = '116.196.115.222'
-        self._user = 'daiab'
-        self._passwd = ''
-        self._database = database
-        self._conn = self._create_conn()
-
-    def _get_conn(self):
-        if time.time() - self._start_time > self._time_interval:
-            self._conn.close()
-            self._conn = self._create_conn()
-            self._start_time = time.time()
-        return self._conn
-
-    def exec_sql(self, sql):
-        conn = self._get_conn()
-        cursor = conn.cursor()
-        cursor.execute(sql)
-        conn.commit()
-
-    def query_sql(self, sql):
-        conn = self._get_conn()
-        cursor = conn.cursor()
-        cursor.execute(sql)
-        return cursor.fetchall()
-
-    def _create_conn(self):
-        return pymysql.connect(host=self._host, user=self._user, password=self._passwd, database=self._database)
-
-
-conn_manager = ConnManage(DATABASE)
+conn_manager = ConnManage()
 
 
 def norm_data():
     # sql = 'select code from base_info'
-    ref_date = 'select trade_date from get_price where code = "000001.XSHE"'
+    ref_date = 'select trade_date from get_price where code = "sz000001"'
     all_trade_date = conn_manager.query_sql(ref_date)
     sql_template = 'select code, open, high, low, close, volume ' \
                    ' from get_price ' \
