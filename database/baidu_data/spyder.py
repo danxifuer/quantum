@@ -9,6 +9,11 @@ https://gupiao.baidu.com/api/stocks/stockdaybar?
 from=pc&os_ver=1&cuid=xxx&vv=100
 &format=json&stock_code=sz000517&step=3
 &start=&count=640&fq_type=front&timestamp=1509434605477
+
+https://gupiao.baidu.com/api/stocks/stockdaybar?
+from=pc&os_ver=1&cuid=xxx&vv=100
+&format=json&stock_code=sz000012&step=3
+&start=&count=160&fq_type=no&timestamp=1509503938702
 '''
 TIMESTAMP = 1509436066
 
@@ -40,7 +45,7 @@ def get_code_data(code, timestamp, retry=10):
                                              'step': 3,
                                              'start': '',
                                              'count': 4000,
-                                             'fq_type': 'front',
+                                             'fq_type': 'no',
                                              'timestamp': timestamp
                                              })
             ret = []

@@ -92,10 +92,10 @@ def get_ohlcv_future_ret(code, from_date, end_date, future_days='1d'):
 def get_normed_ohlcv_future_ret(code, from_date, end_date, future_days='1d'):
     logging.info('get_ohlcv_future_ret, code: %s', code)
     assert future_days == '1d', 'NotImplementError'
-    sql = 'select h_o, l_o, c_o, o_c, h_c, l_c, volume, future_one_day_returns ' \
+    sql = 'select h_o, l_o, c_o, o_c, h_c, l_c, volume, fu_one_ret ' \
           ' from norm_data_across_stock ' \
           ' where code = "%s" and trade_date >= "%s" and trade_date <= "%s" ' \
-          ' order by id asc' % (code, from_date, end_date)
+          ' order by trade_date asc' % (code, from_date, end_date)
     ret = conn_manager.query_sql(sql)
     if len(ret) == 0:
         return None

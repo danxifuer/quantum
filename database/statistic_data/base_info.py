@@ -1,8 +1,7 @@
 from database import ConnManage
 import numpy as np
 
-
-conn_manager = ConnManage('quantum')
+conn_manager = ConnManage()
 
 
 def base_info(code):
@@ -21,15 +20,15 @@ def base_info(code):
     lowest = np.min(close_p)
     from_date = trade_date_list[0]
     end_date = trade_date_list[-1]
-    sql = conn_manager.exec_template(base_info, {'total_num': len(trade_date_list),
-                                                 'code': '"%s"' % code,
-                                                 'from_date': '"%s"' % from_date,
-                                                 'end_date': '"%s"' % end_date,
-                                                 'close_price_highest': highest,
-                                                 'close_price_lowest': lowest,
-                                                 })
-    print(sql)
-    # conn_manager.exec_sql(sql)
+    sql = conn_manager.exec_template('base_info', {'total_num': len(trade_date_list),
+                                                   'code': '"%s"' % code,
+                                                   'from_date': '"%s"' % from_date,
+                                                   'end_date': '"%s"' % end_date,
+                                                   'close_price_highest': highest,
+                                                   'close_price_lowest': lowest,
+                                                   })
+    # print(sql)
+    conn_manager.exec_sql(sql)
 
 
 def _handle(code):

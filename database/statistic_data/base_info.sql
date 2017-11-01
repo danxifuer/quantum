@@ -1,5 +1,5 @@
 
- CREATE TABLE `base_info` (
+CREATE TABLE `base_info` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `total_num` int(10) unsigned DEFAULT NULL,
   `code` varchar(32) DEFAULT NULL,

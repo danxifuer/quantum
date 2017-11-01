@@ -73,7 +73,9 @@ def write_ohlcvr_from_normed_data(use_days,
         ori_data = dataset[idx[0]][idx[1]: idx[2]]
         # TODO: filter chain, norm_data, generate label
         data = ori_data[:, :-1]
-        label = ori_data[-1, -1]
+        label = ori_data[:, -1]
+        if np.any(label > 1.1) and np.any(label < 0.9):
+            continue
         new_data = pipe(data)
         if new_data is None:
             continue
@@ -86,10 +88,10 @@ def write_ohlcvr_from_normed_data(use_days,
         count += 1
         if count % 1000 == 0:
             logging.info('write to records: %s', count)
-        if label > max_label:
-            max_label = label
-        elif label < min_label:
-            min_label = label
+        # if label > max_label:
+        #     max_label = label
+        # elif label < min_label:
+        #     min_label = label
     logging.info('total write %s samples, max_label: %s, min_label: %s', count, max_label, min_label)
     record.close()
 
@@ -124,5 +126,5 @@ def _unit_read():
 
 
 if __name__ == '__main__':
-    _unit_write('across_normed_ohlcvr_regression')
+    _unit_write('across_normed_ohlcvr')
     # _unit_read()
