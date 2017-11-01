@@ -74,7 +74,7 @@ def write_ohlcvr_from_normed_data(use_days,
         # TODO: filter chain, norm_data, generate label
         data = ori_data[:, :-1]
         label = ori_data[:, -1]
-        if np.any(label > 1.1) and np.any(label < 0.9):
+        if np.any(label > 1.1) or np.any(label < 0.9) or not np.all(np.isfinite(label)):
             continue
         new_data = pipe(data)
         if new_data is None:
