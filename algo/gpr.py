@@ -1,6 +1,7 @@
 # ref: https://blog.dominodatalab.com/fitting-gaussian-process-models-python/
 # good doc: https://github.com/thuijskens/bayesian-optimization
 # good book: http://www.gaussianprocess.org/gpml/chapters/RW.pdf
+# paper: https://arxiv.org/abs/1610.08733
 
 import numpy as np
 import matplotlib.pylab as plt
@@ -11,26 +12,26 @@ def exponential_cov(x, y, params):
 
 
 def conditional(x_new, x, y, params):
+    A = exponential_cov(x_new, x_new, params)
     B = exponential_cov(x_new, x, params)
     C = exponential_cov(x, x, params)
-    A = exponential_cov(x_new, x_new, params)
 
     mu = np.linalg.inv(C).dot(B.T).T.dot(y)
     sigma = A - B.dot(np.linalg.inv(C).dot(B.T))
-    return mu.squeeze() ] sigma.squeeze()
+    return mu.squeeze(), sigma.squeeze()
 
 
-θ = [1, 10]
-σ_0 = exponential_cov(0, 0, θ)
+theta = [1, 10]
+sigma_0 = exponential_cov(0, 0, theta)
 xpts = np.arange(-3, 3, step=0.01)
-plt.errorbar(xpts, np.zeros(len(xpts)), yerr=σ_0, capsize=0)
+plt.errorbar(xpts, np.zeros(len(xpts)), yerr=sigma_0, capsize=0)
 
 plt.show()
 x = [1.]
-y = [np.random.normal(scale=σ_0)]
+y = [np.random.normal(scale=sigma_0)]
 print(y)
 
-σ_1 = exponential_cov(x, x, θ)
+sigma_1 = exponential_cov(x, x, theta)
 
 
 def predict(x, data, kernel, params, sigma, t):
@@ -42,37 +43,37 @@ def predict(x, data, kernel, params, sigma, t):
 
 
 x_pred = np.linspace(-3, 3, 1000)
-predictions = [predict(i, x, exponential_cov, θ, σ_1, y) for i in x_pred]
+predictions = [predict(i, x, exponential_cov, theta, sigma_1, y) for i in x_pred]
 
 y_pred, sigmas = np.transpose(predictions)
 plt.errorbar(x_pred, y_pred, yerr=sigmas, capsize=0)
 plt.plot(x, y, "ro")
 plt.show()
 
-m, s = conditional([-0.7], x, y, θ)
+m, s = conditional([-0.7], x, y, theta)
 y2 = np.random.normal(m, s)
 print(y2)
 
 x.append(-0.7)
 y.append(y2)
 
-σ_2 = exponential_cov(x, x, θ)
-predictions = [predict(i, x, exponential_cov, θ, σ_2, y) for i in x_pred]
+sigma_2 = exponential_cov(x, x, theta)
+predictions = [predict(i, x, exponential_cov, theta, sigma_2, y) for i in x_pred]
 y_pred, sigmas = np.transpose(predictions)
 plt.errorbar(x_pred, y_pred, yerr=sigmas, capsize=0)
 plt.plot(x, y, "ro")
 plt.show()
 
 x_more = [-2.1, -1.5, 0.3, 1.8, 2.5]
-mu, s = conditional(x_more, x, y, θ)
+mu, s = conditional(x_more, x, y, theta)
 y_more = np.random.multivariate_normal(mu, s)
 print(y_more)
 
 x += x_more
 y += y_more.tolist()
 
-σ_new = exponential_cov(x, x, θ)
-predictions = [predict(i, x, exponential_cov, θ, σ_new, y) for i in x_pred]
+sigma_new = exponential_cov(x, x, theta)
+predictions = [predict(i, x, exponential_cov, theta, sigma_new, y) for i in x_pred]
 
 y_pred, sigmas = np.transpose(predictions)
 plt.errorbar(x_pred, y_pred, yerr=sigmas, capsize=0)
