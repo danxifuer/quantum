@@ -3,7 +3,7 @@ import threading
 import mxnet as mx
 import numpy as np
 import time
-from rnn_config import SEQ_LEN, INPUT_SIZE
+from rnn_config import SEQ_LEN, INPUT_SIZE, PREDICT_LEN
 
 
 class DataIter:
@@ -31,7 +31,7 @@ class DataIter:
                 header, data = mx.recordio.unpack(item)
                 array = np.frombuffer(data, np.float32).reshape(SEQ_LEN, INPUT_SIZE)
                 batch_data.append(array)
-                batch_label.append(header.label)
+                batch_label.append(header.label[-PREDICT_LEN:])
             batch_data = np.array(batch_data)
             batch_label = np.array(batch_label)
             self.q.put((batch_data, batch_label))

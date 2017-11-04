@@ -103,8 +103,8 @@ def _unit_write(data_type):
                      test_write=False)
     elif data_type == 'across_normed_ohlcvr':
         write_ohlcvr_from_normed_data(50,
-                                      rec_name='ohlcvr_from_norm_data_50_len_10_cls.rec',
-                                      class_num=10,
+                                      rec_name='ohlcvr_from_norm_data_50_len_2_cls.rec',
+                                      class_num=2,
                                       test_write=False)
     elif data_type == 'across_normed_ohlcvr_regression':
         write_ohlcvr_from_normed_data(50,

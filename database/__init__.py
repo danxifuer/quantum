@@ -14,9 +14,9 @@ class ConnManage:
     def __init__(self):
         self._time_interval = 60 * 5  # 5 min
         self._start_time = time.time()
-        self._host = 'localhost'
-        self._user = 'root'
-        self._passwd = ''
+        self._host = '116.196.115.222'
+        self._user = 'daiab'
+        self._passwd = 'asdf..12'
         self._database = DATABASE
         self._conn = self._create_conn()
 

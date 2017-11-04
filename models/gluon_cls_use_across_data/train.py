@@ -48,11 +48,11 @@ model = model.RNNModel(mode=CELL_TYPE, num_embed=INPUT_SIZE,
                        num_hidden=HIDDEN_UNITS, seq_len=SEQ_LEN,
                        num_layers=NUM_LAYERS, dropout=DROPOUT)
 model.collect_params().initialize(mx.init.Xavier(), ctx=context)
-model.collect_params().load(RESTORE_PATH, context)
+# model.collect_params().load(RESTORE_PATH, context)
 trainer = gluon.Trainer(model.collect_params(), 'sgd',
                         {'learning_rate': LR,
                          'momentum': 0.9,
-                         'wd': 0.0})
+                         'wd': 0.00001})
 loss = gluon.loss.SoftmaxCrossEntropyLoss()
 lr_decay = LRDecay(LR, END_LR, 0.6, DECAY_STEP)
 
@@ -61,12 +61,13 @@ def train():
     for epoch in range(EPOCH):
         total_loss = 0.0
         total_acc = 0.0
-        start_time = time.time()
         hidden = model.begin_state(func=mx.nd.zeros, batch_size=BATCH_SIZE, ctx=context)
+        total = BATCH_SIZE * PREDICT_LEN * LOG_INTERVAL
         for i in range(ITER_NUM_EPCOH):
             data, target = data_iter.next()
             data = mx.nd.array(data, context)
             target = mx.nd.array(target, context)
+            target = mx.nd.reshape(target, shape=(-1, ))
             hidden = detach(hidden)
             with autograd.record():
                 output, hidden = model(data, hidden)
@@ -83,8 +84,8 @@ def train():
             total_acc += mx.nd.sum(mx.nd.equal(mx.nd.argmax(output, axis=1), target)).asscalar()
 
             if i % LOG_INTERVAL == 0:
-                cur_loss = total_loss / BATCH_SIZE / LOG_INTERVAL
-                cur_acc = total_acc / BATCH_SIZE / LOG_INTERVAL
+                cur_loss = total_loss / total
+                cur_acc = total_acc / total
                 logger.info('%d # %d loss %.5f, ppl %.5f, lr %.5f, acc %.5f',
                             epoch, i, cur_loss, math.exp(cur_loss), trainer._optimizer.lr, cur_acc)
                 total_loss = 0.0
