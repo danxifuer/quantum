@@ -5,7 +5,7 @@ from mxnet import gluon, autograd
 import model
 import logging
 from rnn_config import *
-from dataiter import DataIter
+from dataiter import DataIter, InferDataIter
 
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
@@ -41,58 +41,88 @@ def detach(hidden):
 
 
 LOG_INTERVAL = 40
-data_iter = DataIter(TRAIN_DATA_PATH, BATCH_SIZE)
 CLIP = 0.2
-context = mx.gpu(0)
-model = model.RNNModel(mode=CELL_TYPE, num_embed=INPUT_SIZE,
-                       num_hidden=HIDDEN_UNITS, seq_len=SEQ_LEN,
-                       num_layers=NUM_LAYERS, dropout=DROPOUT)
-model.collect_params().initialize(mx.init.Xavier(), ctx=context)
+
+
 # model.collect_params().load(RESTORE_PATH, context)
-trainer = gluon.Trainer(model.collect_params(), 'sgd',
-                        {'learning_rate': LR,
-                         'momentum': 0.9,
-                         'wd': 0.00001})
-loss = gluon.loss.SoftmaxCrossEntropyLoss()
-lr_decay = LRDecay(LR, END_LR, 0.6, DECAY_STEP)
 
 
-def train():
-    for epoch in range(EPOCH):
+class ModelTrain:
+    def __init__(self):
+        self.context = mx.gpu(0)
+        self.model = model.RNNModel(mode=CELL_TYPE, num_embed=INPUT_SIZE,
+                                    num_hidden=HIDDEN_UNITS, seq_len=SEQ_LEN,
+                                    num_layers=NUM_LAYERS, dropout=DROPOUT)
+        self.trainer = gluon.Trainer(model.collect_params(), 'sgd',
+                                     {'learning_rate': LR,
+                                      'momentum': 0.9,
+                                      'wd': 0.00001})
+        self.loss = gluon.loss.SoftmaxCrossEntropyLoss()
+        self.lr_decay = LRDecay(LR, END_LR, 0.6, DECAY_STEP)
+        self.data_iter = DataIter(TRAIN_DATA_PATH, BATCH_SIZE)
+        self.infer_iter = InferDataIter(INFER_DATA_PATH, BATCH_SIZE)
+
+    def _model_init(self):
+        self.model.collect_params().initialize(mx.init.Xavier(), ctx=self.context)
+
+    def run(self):
+        hidden = model.begin_state(func=mx.nd.zeros, batch_size=BATCH_SIZE, ctx=self.context)
+        for epoch in range(EPOCH):
+            total_loss = 0.0
+            total_acc = 0.0
+            total = BATCH_SIZE * PREDICT_LEN * LOG_INTERVAL
+            for i in range(ITER_NUM_EPCOH):
+                data, target = self.data_iter.next()
+                data = mx.nd.array(data, self.context)
+                target = mx.nd.array(target, self.context)
+                target = mx.nd.reshape(target, shape=(-1,))
+                hidden = detach(hidden)
+                with autograd.record():
+                    output, hidden = model(data, hidden)
+                    L = self.loss(output, target)
+                    L.backward()
+
+                grads = [i.grad(self.context) for i in model.collect_params().values()]
+                # Here gradient is for the whole batch.
+                # So we multiply max_norm by batch_size and bptt size to balance it.
+                gluon.utils.clip_global_norm(grads, CLIP * BATCH_SIZE)
+
+                self.trainer.step(BATCH_SIZE)
+                total_loss += mx.nd.sum(L).asscalar()
+                total_acc += mx.nd.sum(mx.nd.equal(mx.nd.argmax(output, axis=1), target)).asscalar()
+
+                if i % LOG_INTERVAL == 0:
+                    cur_loss = total_loss / total
+                    cur_acc = total_acc / total
+                    logger.info('%d # %d loss %.5f, ppl %.5f, lr %.5f, acc %.5f',
+                                epoch, i, cur_loss, math.exp(cur_loss), self.trainer._optimizer.lr, cur_acc)
+                    total_loss = 0.0
+                    total_acc = 0.0
+                self.trainer._optimizer.lr = self.lr_decay.lr
+            self.infer()
+            self.model.collect_params().save(RESTORE_PATH)
+
+    def infer(self):
         total_loss = 0.0
         total_acc = 0.0
-        hidden = model.begin_state(func=mx.nd.zeros, batch_size=BATCH_SIZE, ctx=context)
-        total = BATCH_SIZE * PREDICT_LEN * LOG_INTERVAL
-        for i in range(ITER_NUM_EPCOH):
-            data, target = data_iter.next()
-            data = mx.nd.array(data, context)
-            target = mx.nd.array(target, context)
-            target = mx.nd.reshape(target, shape=(-1, ))
-            hidden = detach(hidden)
-            with autograd.record():
+        count = 0
+        try:
+            while True:
+                data, target = self.infer_iter.next()
+                data = mx.nd.array(data, self.context)
+                target = mx.nd.array(target, self.context)
+                target = mx.nd.reshape(target, shape=(-1,))
                 output, hidden = model(data, hidden)
-                L = loss(output, target)
-                L.backward()
-
-            grads = [i.grad(context) for i in model.collect_params().values()]
-            # Here gradient is for the whole batch.
-            # So we multiply max_norm by batch_size and bptt size to balance it.
-            gluon.utils.clip_global_norm(grads, CLIP * BATCH_SIZE)
-
-            trainer.step(BATCH_SIZE)
-            total_loss += mx.nd.sum(L).asscalar()
-            total_acc += mx.nd.sum(mx.nd.equal(mx.nd.argmax(output, axis=1), target)).asscalar()
-
-            if i % LOG_INTERVAL == 0:
-                cur_loss = total_loss / total
-                cur_acc = total_acc / total
-                logger.info('%d # %d loss %.5f, ppl %.5f, lr %.5f, acc %.5f',
-                            epoch, i, cur_loss, math.exp(cur_loss), trainer._optimizer.lr, cur_acc)
-                total_loss = 0.0
-                total_acc = 0.0
-            trainer._optimizer.lr = lr_decay.lr
-        model.collect_params().save(RESTORE_PATH)
+                L = self.loss(output, target)
+                total_loss += mx.nd.sum(L).asscalar()
+                total_acc += mx.nd.sum(mx.nd.equal(mx.nd.argmax(output, axis=1), target)).asscalar()
+                count += BATCH_SIZE
+        except:
+            cur_loss = total_loss / count
+            cur_acc = total_acc / count
+            logger.info('valid: loss %.5f, ppl %.5f, acc %.5f',
+                        cur_loss, math.exp(cur_loss), cur_acc)
 
 
 if __name__ == '__main__':
-    train()
+    ModelTrain().run()

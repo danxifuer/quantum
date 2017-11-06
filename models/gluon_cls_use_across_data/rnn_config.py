@@ -20,7 +20,7 @@ END_LR = 0.0002
 INPUT_SIZE = 7
 CELL_TYPE = 'rnn_relu'
 TRAIN_DATA_PATH = '/home/daiab/machine_disk/code/quantum/ohlcvr_from_norm_data_50_len_2_cls.rec'
-# INFER_DATA_PATH = ''
+INFER_DATA_PATH = ''
 RESTORE_PATH = '/home/daiab/machine_disk/code/quantum/models/gluon_cls_use_across_data/save/mx_model.params'
 
 
