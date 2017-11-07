@@ -16,7 +16,7 @@ class ConnManage:
         self._start_time = time.time()
         self._host = '116.196.115.222'
         self._user = 'daiab'
-        self._passwd = 'asdf..12'
+        self._passwd = ''
         self._database = DATABASE
         self._conn = self._create_conn()
 
