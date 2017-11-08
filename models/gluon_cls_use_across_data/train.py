@@ -58,7 +58,7 @@ class ModelTrain:
         self.trainer = gluon.Trainer(self.model.collect_params(), 'sgd',
                                      {'learning_rate': LR,
                                       'momentum': 0.9,
-                                      'wd': 0.00001})
+                                      'wd': 0.0001})
         self.loss = gluon.loss.SoftmaxCrossEntropyLoss()
         self.lr_decay = LRDecay(LR, END_LR, 0.6, DECAY_STEP)
         self.data_iter = DataIter(TRAIN_DATA_PATH, BATCH_SIZE)
@@ -114,7 +114,7 @@ class ModelTrain:
             self.plot()
 
     def valid(self, hidden):
-        print('start to valid')
+        logger.info('start to valid')
         total_loss = 0.0
         total_acc = 0.0
         count = 0
@@ -135,14 +135,13 @@ class ModelTrain:
             logger.info('valid: loss %.5f, ppl %.5f, acc %.5f',
                         cur_loss, math.exp(cur_loss), cur_acc)
             self.val_record.append((cur_loss, cur_acc))
-        print('valid over')
 
     def plot(self):
         train = np.array(self.train_record)
         val = np.array(self.val_record)
         x = np.arange(0, train.shape[0])
 
-        fig, axes = plt.subplots(ncols=2, figsize=(18, 6))
+        fig, axes = plt.subplots(nrows=2, figsize=(18, 9))
         ax = axes[0]
         ax.plot(x, train[:, 0], 'o-')
         ax.plot(x, val[:, 0], '*-')

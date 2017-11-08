@@ -32,7 +32,7 @@ class RNNModel(gluon.Block):
                 raise ValueError("Invalid mode %s. Options are rnn_relu, "
                                  "rnn_tanh, lstm, and gru" % mode)
 
-            self.fc = nn.Dense(NUM_CLASSES, in_units=num_hidden * SEQ_LEN)
+            self.fc = nn.Dense(NUM_CLASSES, in_units=num_hidden)
             self.num_hidden = num_hidden
             self.seq_len = seq_len
 
@@ -40,9 +40,9 @@ class RNNModel(gluon.Block):
         output, hidden = self.rnn(inputs, hidden)
         output = self.drop(output)
         # output = output[:, -PREDICT_LEN:, :]
-        # output = mx.nd.slice_axis(output, begin=SEQ_LEN - PREDICT_LEN,
-        #                           end=SEQ_LEN, axis=1)
-        decoded = self.fc(output.reshape((-1, self.num_hidden * SEQ_LEN)))
+        output = mx.nd.slice_axis(output, begin=SEQ_LEN - PREDICT_LEN,
+                                  end=SEQ_LEN, axis=1)
+        decoded = self.fc(output.reshape((-1, self.num_hidden)))
         return decoded, hidden
 
     def begin_state(self, *args, **kwargs):
