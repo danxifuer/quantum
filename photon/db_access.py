@@ -11,7 +11,7 @@ conn_manager = ConnManage()
 
 def get_ohlcv_by_date(start_date, end_date, code):
     sql = "select open, high, low, close, volume from get_price where trade_date >= '%s' and trade_date <= '%s' \
-            and code = '%s' order by id asc"
+            and code = '%s' order by trade_date asc"
     sql = sql % (start_date, end_date, code)
     ret = conn_manager.query_sql(sql)
     if len(ret) == 0:
@@ -20,19 +20,28 @@ def get_ohlcv_by_date(start_date, end_date, code):
 
 
 def get_ohlcv(code):
-    sql = "select open, high, low, close, volume from get_price where \
-            code = '%s' order by id asc" % code
+    sql = "select open, high, low, close, volume, from get_price where \
+            code = '%s' order by trade_date asc" % code
     ret = conn_manager.query_sql(sql)
     if len(ret) == 0:
         return None
     return np.array(ret, dtype=np.float32)
 
 
+def get_ochlv_for_k_line(code, start_date, end_date):
+    sql = "select trade_date, open, close, high, low, volume from get_price where trade_date >= '%s' " \
+          " and trade_date <= '%s' " \
+          " and code = '%s' order by trade_date asc"
+    sql = sql % (start_date, end_date, code)
+    ret = conn_manager.query_sql(sql)
+    return np.array(ret)
+
+
 def get_ohlcv_pre_ret(code, pre_days='2d'):
     if pre_days == '2d':
         sql = 'select open, high, low, close, volume, pre_two_day_returns ' \
               ' from get_price ' \
-              ' where code = "%s" order by id asc' % code
+              ' where code = "%s" order by trade_date asc' % code
     else:
         raise NotImplementedError
     ret = conn_manager.query_sql(sql)
@@ -47,7 +56,7 @@ def get_ohlcv_future_ret(code, from_date, end_date, future_days='1d'):
     sql = 'select open, high, low, close, volume, future_one_day_returns ' \
           ' from get_price ' \
           ' where code = "%s" and trade_date >= "%s" and trade_date <= "%s" ' \
-          ' order by id asc' % (code, from_date, end_date)
+          ' order by trade_date asc' % (code, from_date, end_date)
     ret = conn_manager.query_sql(sql)
     if len(ret) == 0:
         return None

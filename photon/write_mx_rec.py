@@ -26,7 +26,7 @@ def write_ohlcvr(use_days,
         ori_data = dataset[idx[0]][idx[1]: idx[2]]
         # TODO: filter chain, norm_data, generate label
         data = ori_data[:, :-1]
-        label = ori_data[-1, -1]
+        label = ori_data[:, -1]
         new_data = pipe(data)
         if new_data is None:
             continue
