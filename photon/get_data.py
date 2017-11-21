@@ -1,6 +1,7 @@
 from photon.db_access import get_ohlcv_future_ret, get_code, get_normed_ohlcv_future_ret
 from random import shuffle
 import logging
+import numpy as np
 
 
 def get_ohlcvr_and_shuffle_idx(use_days,
@@ -21,6 +22,8 @@ def get_ohlcvr_and_shuffle_idx(use_days,
         query_count += 1
         if query_count % 100 == 0:
             logging.info('query database: %s', query_count)
+        empty = tmp[1:, 3] / tmp[:-1, 3]
+        tmp = np.column_stack([tmp[:-1], empty])
         all_data.append(tmp[remove_head_num:])
     idx_list = []
     for i, d in enumerate(all_data):

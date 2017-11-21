@@ -55,14 +55,14 @@ class ContinueUpFilter(Filter):
 
 
 class ZScoreNorm(Norm):
-    def __call__(self, data, clip=True):
+    def __call__(self, data, clip=False):
         if not isinstance(data, np.ndarray):
             data = np.array(data)
         std = np.std(data, axis=0, keepdims=True)
         mean = np.mean(data, axis=0, keepdims=True)
         ret = (data - mean) / std
         if clip:
-            ret = _clip_by_std(mean, std, ret)
+            ret = _clip_by_std(0, std, ret)
         return ret
 
 
@@ -126,6 +126,22 @@ class Pipeline:
                         ContinueUpFilter(high_idx=1, low_idx=2),
                         RatioNorm({'open': 0, 'high': 1, 'low': 2,
                                    'close': 3, 'volume': 4}, use_log1p=True),
+                        NaNFilter()]
+
+    def __call__(self, data):
+        data = data.copy()
+        for filter in self.filters:
+            data = filter(data)
+            if data is None:
+                return None
+        return data
+
+
+class PipelineWithZScore:
+    def __init__(self):
+        self.filters = [NaNFilter(),
+                        ContinueUpFilter(high_idx=1, low_idx=2),
+                        ZScoreNorm(),
                         NaNFilter()]
 
     def __call__(self, data):

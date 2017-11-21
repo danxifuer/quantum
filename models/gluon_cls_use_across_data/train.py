@@ -45,20 +45,19 @@ LOG_INTERVAL = 40
 CLIP = 0.1
 
 
-# model.collect_params().load(RESTORE_PATH, context)
-
-
 class ModelTrain:
     def __init__(self):
-        self.context = mx.gpu(0)
+        self.context = mx.gpu(2)
         self.model = model.RNNModel(mode=CELL_TYPE, num_embed=INPUT_SIZE,
                                     num_hidden=HIDDEN_UNITS, seq_len=SEQ_LEN,
                                     num_layers=NUM_LAYERS, dropout=DROPOUT)
         self._model_init()
+        # self.model.collect_params().load(RESTORE_PATH, mx.gpu(0))
+
         self.trainer = gluon.Trainer(self.model.collect_params(), 'sgd',
                                      {'learning_rate': LR,
-                                      'momentum': 0.9,
-                                      'wd': 0.0001})
+                                      'momentum': 0.8,
+                                      'wd': 0.0})
         self.loss = gluon.loss.SoftmaxCrossEntropyLoss()
         self.lr_decay = LRDecay(LR, END_LR, 0.6, DECAY_STEP)
         self.data_iter = DataIter(TRAIN_DATA_PATH, BATCH_SIZE)
@@ -70,8 +69,8 @@ class ModelTrain:
         self.model.collect_params().initialize(mx.init.Xavier(), ctx=self.context)
 
     def run(self):
-        hidden = self.model.begin_state(func=mx.nd.zeros, batch_size=BATCH_SIZE, ctx=self.context)
         for epoch in range(EPOCH):
+            hidden = self.model.begin_state(func=mx.nd.zeros, batch_size=BATCH_SIZE, ctx=self.context)
             tmp_loss = 0.0
             tmp_acc = 0.0
             epoch_loss = []
@@ -108,12 +107,13 @@ class ModelTrain:
                     tmp_acc = 0.0
                 self.trainer._optimizer.lr = self.lr_decay.lr
             self.model.collect_params().save(RESTORE_PATH)
-            self.valid(hidden)
+            self.valid()
             self.train_record.append((sum(epoch_loss) / len(epoch_loss),
                                       sum(epoch_acc) / len(epoch_acc)))
             self.plot()
 
-    def valid(self, hidden):
+    def valid(self):
+        hidden = self.model.begin_state(func=mx.nd.zeros, batch_size=BATCH_SIZE, ctx=self.context)
         logger.info('start to valid')
         total_loss = 0.0
         total_acc = 0.0
@@ -151,7 +151,8 @@ class ModelTrain:
         ax.plot(x, train[:, 1], 'o-')
         ax.plot(x, val[:, 1], '*-')
         ax.set_title("acc")
-        plt.show()
+        plt.savefig('train_val.svg', format='svg', dpi=800)
+        # plt.show()
 
 
 if __name__ == '__main__':
