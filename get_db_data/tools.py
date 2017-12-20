@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import os
 from datetime import datetime, timedelta
 
@@ -105,13 +106,33 @@ def concat_day_min(day_csv, min_csv, pre_days, min_duration=4):
         min_data = (min_data - min_data.mean()) / min_data.std()
         total_data = pd.concat((day_data, min_data))
         X.append(total_data)
-        Y.append(day_rb.iloc[idx+1, 3])
+        # print(day_rb.iloc[idx+1, 3] / day_rb.iloc[idx, 3])
+        Y.append(int((day_rb.iloc[idx+1, 3] / day_rb.iloc[idx, 3]) >= 1))
+        # print(Y)
+        # exit()
         # print(total_data.shape)
         # print(day_rb.iloc[idx+1, 3].shape)
     return X, Y
 
 
-def main():
+def min_data(csv_file, pre_mins=500, future_mins=40):
+    rb = pd.read_csv(csv_file, index_col=0)
+    rb.index = pd.DatetimeIndex(rb.index)
+    X, Y = [], []
+    for i in range(pre_mins, rb.shape[0] - future_mins):
+        start, end = i - pre_mins, i
+        data = rb[start: end]
+        data = (data - data.mean()) / data.std()
+        if not np.all(np.isfinite(data)):
+            print('data nan')
+            continue
+        target = int(rb.iloc[i + future_mins, 3] >= rb.iloc[i, 3])
+        X.append(data)
+        Y.append(target)
+    return X, Y
+
+
+def write_new_csv():
     csv = remove_ms_for_rb('/home/daiab/machine_disk/code/quantum/database/RB_min.csv')
     csv = remove_from_pandas(csv)
     # min_line(csv,
@@ -122,8 +143,9 @@ def main():
 
 
 if __name__ == '__main__':
-    # main()
+    # write_new_csv()
     concat_day_min('/home/daiab/machine_disk/code/quantum/database/RB_1day.csv',
                    '/home/daiab/machine_disk/code/quantum/database/RB_30min.csv',
                    20,
                    4)
+    # min_data('/home/daiab/machine_disk/code/quantum/database/RB_min.csv')

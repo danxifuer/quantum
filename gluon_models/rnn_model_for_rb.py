@@ -15,24 +15,24 @@ logging.basicConfig(level=logging.DEBUG,
                     filemode='w')
 logger = logging.getLogger(__name__)
 
-BATCH_SIZE = 512
-SEQ_LEN = 700
+BATCH_SIZE = 128
+SEQ_LEN = 500
 PREDICT_LEN = 1
-NUM_LAYERS = 5
+NUM_LAYERS = 4
 HIDDEN_UNITS = 128
 NUM_CLASSES = 2
 NUM_RESIDUAL_LAYERS = NUM_LAYERS - 1
 ATTN_LENGTH = 20
 DROPOUT = 0.1
 EPOCH = 20
-EXAMPLES = 279707
+EXAMPLES = 58555
 ITER_NUM_EPCOH = int(EXAMPLES / BATCH_SIZE)
 DECAY_STEP = ITER_NUM_EPCOH * EPOCH
 LR = 0.04
 END_LR = 0.0002
 INPUT_SIZE = 5
 CELL_TYPE = 'rnn_tanh'
-CSV_FILE = '/home/daiab/machine_disk/code/quantum/database/RB_min.csv'
+CSV_FILE = '/home/daiab/machine_disk/code/quantum/database/RB_5min.csv'
 RESTORE_PATH = './model_save/%s.params' % MODEL_NAME
 # infer
 INFER_SIZE = 10
@@ -108,11 +108,6 @@ def detach(hidden):
 def read_csv(csv_file):
     rb = pd.read_csv(csv_file, index_col=0)
     rb.index = pd.DatetimeIndex(rb.index)
-    a = pd.DataFrame()
-    # s_date = datetime(2014, 9, 9, 8, 59, 00)
-    # delta = timedelta(1)
-    # tmp_s_date = s_date + delta
-    # tmp_s_date = pd.Timestamp(tmp_s_date)
     close = (rb.loc[:, 'close'] - rb.loc[:, 'close'].rolling(window=5).mean()) / \
              rb.loc[:, 'close'].rolling(window=5).std()
     nan = close.isnull()
@@ -149,7 +144,6 @@ class DataIter:
                 logger.info(std)
                 logger.info(mean)
                 logger.info(data)
-                exit()
                 continue
             target = (self._close[end + self._future_size] >= self._close[end]).astype(np.int32)
             self._count += 1

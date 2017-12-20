@@ -31,15 +31,15 @@ def test(dataset):
     sess = tf.Session()
     sess.run(iterator.initializer)
     sess.run(tf.global_variables_initializer())
-    ret = sess.run(num)
+    ret = sess.run(x)
     print('==================')
-    print(ret)
+    print(ret.shape)
     print('==================')
     sess.close()
     exit()
 
 
-def get_padded_dataset(X, Y, batch_size, x_eo_id=1000):
+def get_padded_dataset(X, Y, batch_size, x_eo_id=1000, buffer_size=10):
     X = [d.T for d in X]
 
     def generator(x, y):
@@ -48,6 +48,7 @@ def get_padded_dataset(X, Y, batch_size, x_eo_id=1000):
     dataset = tf.data.Dataset.from_generator(partial(generator, X, Y),
                                              (tf.float32, tf.int32),
                                              (tf.TensorShape([5, None]), tf.TensorShape([])))
+    dataset = dataset.shuffle(buffer_size)
     dataset = dataset.map(
         lambda x, y: (
             x, y, tf.shape(x)[1]
@@ -62,9 +63,8 @@ def get_padded_dataset(X, Y, batch_size, x_eo_id=1000):
             float(x_eo_id),
             0,
             0))
-    batched_iter = dataset.make_initializable_iterator()
-    test(dataset)
-    return batched_iter.get_next()
+    return dataset
+
 
 
 def _unit_read_records():

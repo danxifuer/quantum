@@ -255,6 +255,7 @@ for i in range(opt.num_episode):
         # Train
         if frame_counter > opt.replay_start_size:
             if frame_counter % opt.learning_frequency == 0:
+                print('training')
                 transitions = replay_memory.sample(opt.batch_size)
                 batch = Transition(*zip(*transitions))
                 batch_state = nd.array(batch.state, opt.ctx).astype('float32')
@@ -276,7 +277,7 @@ for i in range(opt.num_episode):
 
         t += 1
         frame_counter += 1
-        if frame_counter % 100:
+        if frame_counter % 100 == 0:
             print('frame_counter: ', frame_counter)
 
         # Save the model and update Target model
