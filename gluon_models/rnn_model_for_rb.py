@@ -1,6 +1,7 @@
 from mxnet import gluon
 from mxnet.gluon import nn, rnn
 from mxnet import autograd
+from get_db_data.tools import concat_day_min
 import mxnet as mx
 import math
 import time
@@ -8,6 +9,7 @@ import pandas as pd
 import numpy as np
 import logging
 import random
+
 MODEL_NAME = __name__
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
@@ -116,7 +118,7 @@ def read_csv(csv_file):
     return np.array(rb), np.array(close)
 
 
-class DataIter:
+class CSVFileDataIter:
     def __init__(self, csv_file, seq_len, batch_size, future_size):
         self._rb, self._close = read_csv(csv_file)
         size = self._rb.shape[0]
@@ -140,10 +142,6 @@ class DataIter:
             data = (data_origin - mean) / std
             if not np.all(np.isfinite(data)):
                 logger.info('data nan')
-                logger.info(data_origin)
-                logger.info(std)
-                logger.info(mean)
-                logger.info(data)
                 continue
             target = (self._close[end + self._future_size] >= self._close[end]).astype(np.int32)
             self._count += 1
@@ -152,8 +150,34 @@ class DataIter:
         return data_batch, label_batch
 
 
+class DataFrameDataIter:
+    def __init__(self, seq_len, batch_size, future_size):
+        self._rb, self._close = \
+            concat_day_min('/home/daiab/machine_disk/code/quantum/database/RB_1day.csv',
+                           '/home/daiab/machine_disk/code/quantum/database/RB_30min.csv',
+                           seq_len,
+                           4)
+        size = self._rb.shape[0]
+        self._count = 0
+        self._batch_size = batch_size
+        self._future_size = future_size
+        self._idx = [(start, start + batch_size) for
+                     start in range(size - batch_size)]
+        self._size = len(self._idx)
+        logger.info('all sample size == %s', self._size)
+        random.shuffle(self._idx)
+
+    def next(self):
+        count = self._count % self._size
+        start, end = self._idx[count]
+        data_batch = self._rb[start: end]
+        label_batch = self._close[start: end]
+        self._count += 1
+        return data_batch, label_batch
+
+
 def train():
-    data_iter = DataIter(CSV_FILE, SEQ_LEN, BATCH_SIZE, 20)
+    data_iter = CSVFileDataIter(CSV_FILE, SEQ_LEN, BATCH_SIZE, 20)
     LOG_INTERVAL = 20
     CLIP = 0.2
     context = mx.gpu(0)
