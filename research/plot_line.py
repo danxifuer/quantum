@@ -1,78 +1,160 @@
 import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
+from indicator.simple_moving_average import simple_moving_average as sma
+import plotly
+from plotly.figure_factory import create_candlestick
+from plotly.graph_objs import Data, Figure
+
+plotly.tools.set_credentials_file(username='daiab',
+                                  api_key='0XbDDTqKb2D4r1bQUH6x')
 
 
-def plot_candles(pricing, title=None, volume_bars=False, color_function=None, technicals=None):
-    def default_color(index, open_price, close_price, low, high):
-        return 'r' if open_price[index] > close_price[index] else 'g'
-
-    color_function = color_function or default_color
-    technicals = technicals or []
-    open_price = pricing['open']
-    close_price = pricing['close']
-    low = pricing['low']
-    high = pricing['high']
-    oc_min = pd.concat([open_price, close_price], axis=1).min(axis=1)
-    oc_max = pd.concat([open_price, close_price], axis=1).max(axis=1)
-
-    if volume_bars:
-        fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, gridspec_kw={'height_ratios': [3, 1]})
+def _plot_kline(data, remote=True):
+    fig = create_candlestick(data.open, data.high, data.low, data.close, dates=data.index)
+    if remote:
+        url = plotly.plotly.plot(fig, filename='candle.html')
+        print('url: ', url)
     else:
-        fig, ax1 = plt.subplots(1, 1)
-    if title:
-        ax1.set_title(title)
-    x = np.arange(len(pricing))
-    candle_colors = [color_function(i, open_price, close_price, low, high) for i in x]
-    candles = ax1.bar(x, oc_max - oc_min, bottom=oc_min, color=candle_colors, linewidth=0)
-    lines = ax1.vlines(x + 0.4, low, high, color=candle_colors, linewidth=1)
-    ax1.xaxis.grid(False)
-    ax1.xaxis.set_tick_params(which='major', length=3.0, direction='in', top='off')
-    # Assume minute frequency if first two bars are in the same day.
-    frequency = 'minute' if (pricing.index[1] - pricing.index[0]).days == 0 else 'day'
-    time_format = '%d-%m-%Y'
-    if frequency == 'minute':
-        time_format = '%H:%M'
-    # Set X axis tick labels.
-    plt.xticks(x, [date.strftime(time_format) for date in pricing.index], rotation='vertical')
-    for indicator in technicals:
-        ax1.plot(x, indicator)
-
-    if volume_bars:
-        volume = pricing['volume']
-        volume_scale = None
-        scaled_volume = volume
-        if volume.max() > 1000000:
-            volume_scale = 'M'
-            scaled_volume = volume / 1000000
-        elif volume.max() > 1000:
-            volume_scale = 'K'
-            scaled_volume = volume / 1000
-        ax2.bar(x, scaled_volume, color=candle_colors)
-        volume_title = 'Volume'
-        if volume_scale:
-            volume_title = 'Volume (%s)' % volume_scale
-        ax2.set_title(volume_title)
-        ax2.xaxis.grid(False)
-    plt.show()
+        plotly.offline.plot(fig, filename='candle.html', validate=False)
 
 
-def plot_line(csv_file):
-    rb = pd.read_csv(csv_file, index_col=0)
-    rb = rb.iloc[:, :4]
-    rb.plot(kind='line')
-    plt.show()
+def _plot_lines(indexs, data_list, names, remote=True, filename='ma.html'):
+    trace = []
+    for i, d in enumerate(data_list):
+        t = {
+            "x": indexs[i],
+            "y": d,
+            "name": names[i],
+            "type": "scatter"
+        }
+        trace.append(t)
+    data = Data(trace)
+    layout = {"xaxis": {"tickangle": 35}}
+    fig = Figure(data=data, layout=layout)
+    if remote:
+        url = plotly.plotly.plot(fig, filename=filename)
+        print('url: ', url)
+    else:
+        plotly.offline.plot(fig, filename=filename)
 
-# pd.DataFrame().resample()
+
+def candle_line(day_csv, remote=True):
+    day_rb = pd.read_csv(day_csv, index_col=0)
+    day_rb.index = pd.DatetimeIndex(day_rb.index)
+    _plot_kline(day_rb, remote)
 
 
-def plot_kline(csv_file):
-    pass
+def between_days_ma(day_csv, remote=True):
+    day_rb = pd.read_csv(day_csv, index_col=0)
+    day_rb.index = pd.DatetimeIndex(day_rb.index)
+    index = list(range(day_rb.shape[0]))
+    ma_list = [day_rb['close'].values]
+    names = ['origin_data']
+    for p in range(2, 20, 2):
+        ma_list.append(sma(day_rb['close'], p))
+        names.append('%s_day_period' % p)
+        _plot_lines((index,) * len(ma_list),
+                    ma_list,
+                    names,
+                    remote,
+                    'between_days_ma.html')
+
+
+def between_day_min_ma(day_csv, min_csv, remote=True):
+    day_rb = pd.read_csv(day_csv, index_col=0)
+    day_rb.index = pd.DatetimeIndex(day_rb.index)
+    min_rb = pd.read_csv(min_csv, index_col=0)
+    min_rb.index = pd.DatetimeIndex(min_rb.index)
+    short = sma(min_rb['close'], 5)
+    long = sma(day_rb['close'], 2)
+    # plot_kline(day_rb)
+    _plot_lines((list(range(min_rb.shape[0])), list(range(day_rb.shape[0]))),
+                (short, long),
+                ('min_short', 'day_long'),
+                remote,
+                'between_day_min_ma.html')
+
+
+def plot_origin_line(day_csv, remote=False):
+    day_rb = pd.read_csv(day_csv, index_col=0)
+    day_rb.index = pd.DatetimeIndex(day_rb.index)
+    t = {
+        "x": list(range(day_rb.shape[0])),
+        "y": day_rb['close'].values,
+        "name": 'origin_line',
+        "type": "scatter"
+    }
+    data = Data([t])
+    layout = {"xaxis": {"tickangle": 35}}
+    fig = Figure(data=data, layout=layout)
+    if remote:
+        url = plotly.plotly.plot(fig, filename='ma.html')
+        print('url: ', url)
+    else:
+        plotly.offline.plot(fig, filename='ma.html')
+
+
+def skew_kurt(day_csv, period=30, remote=True):
+    day_rb = pd.read_csv(day_csv, index_col=0)
+    day_rb.index = pd.DatetimeIndex(day_rb.index)
+    day_rb = day_rb['close']
+    day_rb = (day_rb - day_rb.mean()) / day_rb.std()
+    skew_value = day_rb.rolling(period).skew()
+    kurt_value = day_rb.rolling(period).kurt()
+    index = list(range(day_rb.shape[0]))
+    t = {
+        "x": index,
+        "y": day_rb.values,
+        "name": 'origin_zscore',
+        "type": "scatter"
+    }
+    t2 = {
+        "x": index,
+        "y": skew_value.values,
+        "name": 'skew',
+        "type": "scatter"
+    }
+    t3 = {
+        "x": index,
+        "y": kurt_value.values,
+        "name": 'kurt',
+        "type": "scatter"
+    }
+    data = Data([t, t2, t3])
+    layout = {"xaxis": {"tickangle": 30}}
+    fig = Figure(data=data, layout=layout)
+    if remote:
+        url = plotly.plotly.plot(fig, filename='skew_kurt.html')
+        print('url: ', url)
+    else:
+        plotly.offline.plot(fig, filename='skew_kurt.html')
+
+
+def plot_std(day_csv, remote=True):
+    day_rb = pd.read_csv(day_csv, index_col=0)
+    day_rb.index = pd.DatetimeIndex(day_rb.index)
+    index = list(range(day_rb.shape[0]))
+    ma_list = [(day_rb['close'] - day_rb['close'].mean()).values]
+    names = ['origin_data']
+    for p in range(2, 20, 2):
+        ma_list.append(day_rb['close'].rolling(p).std().values)
+        names.append('%s_day_std' % p)
+    _plot_lines((index,) * len(ma_list),
+                ma_list,
+                names,
+                remote,
+                'between_days_ma.html')
+
 
 if __name__ == '__main__':
-    csv_file = '/home/daiab/machine_disk/code/quantum/database/RB_1day.csv'
-    rb = pd.read_csv(csv_file, index_col=0)
-    rb.index = pd.DatetimeIndex(rb.index)
-    rb = rb[:100]
-    plot_candles(rb)
-    # plot_line('/home/daiab/machine_disk/code/quantum/database/RB_5min.csv')
+    # between_day_min_ma('/home/daiab/machine_disk/code/quantum/database/RB_1day.csv',
+    #                    '/home/daiab/machine_disk/code/quantum/database/RB_min.csv',
+    #                    True)
+    # between_days_ma('D:\quantum\database\RB_1day.csv',
+    #                 False)
+    # plot_std('D:\quantum\database\RB_1day.csv',
+    #                 False)
+    # candle_line('/home/daiab/machine_disk/code/quantum/database/RB_1day.csv',
+    #             True)
+    skew_kurt('D:\quantum\database\RB_1day.csv',
+              10, False)
+    # plot_origin_line('/home/daiab/machine_disk/code/quantum/database/RB_1day.csv')
