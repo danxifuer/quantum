@@ -45,6 +45,7 @@ def get_padded_dataset(X, Y, batch_size, x_eo_id=1000, buffer_size=10):
     def generator(x, y):
         for i in range(len(x)):
             yield x[i], y[i]
+
     dataset = tf.data.Dataset.from_generator(partial(generator, X, Y),
                                              (tf.float32, tf.int32),
                                              (tf.TensorShape([5, None]), tf.TensorShape([])))
@@ -64,7 +65,6 @@ def get_padded_dataset(X, Y, batch_size, x_eo_id=1000, buffer_size=10):
             0,
             0))
     return dataset
-
 
 
 def _unit_read_records():

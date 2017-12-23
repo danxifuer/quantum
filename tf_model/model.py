@@ -1,9 +1,11 @@
 import logging
 import random
+
 import numpy as np
 import tensorflow as tf
 from tensorflow.contrib.layers import fully_connected
-from get_db_data.tools import concat_day_min, min_data
+
+from csv_data.read_csv_data import get_simple_data, get_concat_day_min_not_aligned
 from tf_model.data_queue import get_padded_dataset
 
 logging.basicConfig(level=logging.DEBUG,
@@ -199,9 +201,9 @@ class Infer:
 
 
 def train():
-    # src, target = concat_day_min(TRAIN_DAY_DATA, TRAIN_MIN_DATA, 20)
-    src, target = min_data('/home/daiab/machine_disk/code/quantum/database/RB_min.csv',
-                           500, 40)
+    src, target = get_concat_day_min_not_aligned(TRAIN_DAY_DATA, TRAIN_MIN_DATA, 20)
+    # src, target = min_data('/home/daiab/machine_disk/code/quantum/database/RB_min.csv',
+    #                        500, 40)
 
     src = [d.values for d in src]
     sample_num = len(src)

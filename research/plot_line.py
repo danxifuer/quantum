@@ -151,10 +151,10 @@ if __name__ == '__main__':
     #                    True)
     # between_days_ma('D:\quantum\database\RB_1day.csv',
     #                 False)
-    # plot_std('D:\quantum\database\RB_1day.csv',
-    #                 False)
+    plot_std('/home/daiab/machine_disk/code/quantum/database/RB_min.csv',
+             False)
     # candle_line('/home/daiab/machine_disk/code/quantum/database/RB_1day.csv',
     #             True)
-    skew_kurt('D:\quantum\database\RB_1day.csv',
-              10, False)
+    # skew_kurt('/home/daiab/machine_disk/code/quantum/database/RB_min.csv',
+    #           120, False)
     # plot_origin_line('/home/daiab/machine_disk/code/quantum/database/RB_1day.csv')

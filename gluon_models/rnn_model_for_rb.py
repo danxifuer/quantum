@@ -1,14 +1,16 @@
+import logging
+import math
+import random
+import time
+
+import mxnet as mx
+import numpy as np
+import pandas as pd
+from mxnet import autograd
 from mxnet import gluon
 from mxnet.gluon import nn, rnn
-from mxnet import autograd
-from get_db_data.tools import concat_day_min
-import mxnet as mx
-import math
-import time
-import pandas as pd
-import numpy as np
-import logging
-import random
+
+from csv_data.read_csv_data import get_simple_data, get_data_ma_smooth
 
 MODEL_NAME = __name__
 logging.basicConfig(level=logging.DEBUG,
@@ -27,14 +29,14 @@ NUM_RESIDUAL_LAYERS = NUM_LAYERS - 1
 ATTN_LENGTH = 20
 DROPOUT = 0.1
 EPOCH = 20
-EXAMPLES = 58555
+EXAMPLES = 280001
 ITER_NUM_EPCOH = int(EXAMPLES / BATCH_SIZE)
 DECAY_STEP = ITER_NUM_EPCOH * EPOCH
 LR = 0.04
 END_LR = 0.0002
 INPUT_SIZE = 5
 CELL_TYPE = 'rnn_tanh'
-CSV_FILE = '/home/daiab/machine_disk/code/quantum/database/RB_5min.csv'
+CSV_FILE = '/home/daiab/machine_disk/code/quantum/csv_data/RB_min.csv'
 RESTORE_PATH = './model_save/%s.params' % MODEL_NAME
 # infer
 INFER_SIZE = 10
@@ -107,77 +109,28 @@ def detach(hidden):
     return hidden
 
 
-def read_csv(csv_file):
-    rb = pd.read_csv(csv_file, index_col=0)
-    rb.index = pd.DatetimeIndex(rb.index)
-    close = (rb.loc[:, 'close'] - rb.loc[:, 'close'].rolling(window=5).mean()) / \
-             rb.loc[:, 'close'].rolling(window=5).std()
-    nan = close.isnull()
-    rb = rb.loc[~nan, :]
-    close = close[~nan]
-    return np.array(rb), np.array(close)
-
-
-class CSVFileDataIter:
-    def __init__(self, csv_file, seq_len, batch_size, future_size):
-        self._rb, self._close = read_csv(csv_file)
-        size = self._rb.shape[0]
+class DataIter:
+    def __init__(self, csv_file, seq_len, batch_size, predict_len):
+        self._X, self._Y = get_simple_data(csv_file, seq_len, predict_len)
+        self._X = [d.values for d in self._X]
+        size = len(self._X)
         self._count = 0
         self._batch_size = batch_size
-        self._future_size = future_size
-        self._idx = [(start, start + seq_len) for
-                     start in range(size - seq_len - self._future_size)]
+        self._idx = [(start, start + batch_size) for start in range(size - batch_size)]
         self._size = len(self._idx)
-        logger.info('all sample size == %s', self._size)
+        logger.info('all batch size == %s', self._size)
         random.shuffle(self._idx)
 
     def next(self):
-        data_batch, label_batch = [], []
-        while len(data_batch) < self._batch_size:
-            count = self._count % self._size
-            start, end = self._idx[count]
-            data_origin = self._rb[start: end]
-            std = np.std(data_origin, axis=0, keepdims=True)
-            mean = np.mean(data_origin, axis=0, keepdims=True)
-            data = (data_origin - mean) / std
-            if not np.all(np.isfinite(data)):
-                logger.info('data nan')
-                continue
-            target = (self._close[end + self._future_size] >= self._close[end]).astype(np.int32)
-            self._count += 1
-            data_batch.append(data)
-            label_batch.append(target)
-        return data_batch, label_batch
-
-
-class DataFrameDataIter:
-    def __init__(self, seq_len, batch_size, future_size):
-        self._rb, self._close = \
-            concat_day_min('/home/daiab/machine_disk/code/quantum/database/RB_1day.csv',
-                           '/home/daiab/machine_disk/code/quantum/database/RB_30min.csv',
-                           seq_len,
-                           4)
-        size = self._rb.shape[0]
-        self._count = 0
-        self._batch_size = batch_size
-        self._future_size = future_size
-        self._idx = [(start, start + batch_size) for
-                     start in range(size - batch_size)]
-        self._size = len(self._idx)
-        logger.info('all sample size == %s', self._size)
-        random.shuffle(self._idx)
-
-    def next(self):
-        count = self._count % self._size
-        start, end = self._idx[count]
-        data_batch = self._rb[start: end]
-        label_batch = self._close[start: end]
-        self._count += 1
+        start, end = random.choice(self._idx)
+        data_batch = self._X[start: end]
+        label_batch = self._Y[start: end]
         return data_batch, label_batch
 
 
 def train():
-    data_iter = CSVFileDataIter(CSV_FILE, SEQ_LEN, BATCH_SIZE, 20)
+    data_iter = DataIter(CSV_FILE, SEQ_LEN, BATCH_SIZE, predict_len=40)
+    print('read data over')
     LOG_INTERVAL = 20
     CLIP = 0.2
     context = mx.gpu(0)
@@ -195,13 +148,11 @@ def train():
     for epoch in range(EPOCH):
         total_loss = 0.0
         total_acc = 0.0
-        start_time = time.time()
         hidden = model.begin_state(func=mx.nd.zeros, batch_size=BATCH_SIZE, ctx=context)
         for i in range(ITER_NUM_EPCOH):
             data, target = data_iter.next()
             data = mx.nd.array(data, context)
             target = mx.nd.array(target, context)
-            # print(data.shape, target.shape)
             hidden = detach(hidden)
             with autograd.record():
                 output, hidden = model(data, hidden)
