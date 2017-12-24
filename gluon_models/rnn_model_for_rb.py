@@ -119,19 +119,19 @@ class DataIter:
         size = len(self._X)
         self._count = 0
         self._batch_size = batch_size
-        self._idx = [(start, start + batch_size) for start in range(size - batch_size)]
+        self._idx = [(start, start + batch_size) for start in range(0, size - batch_size, batch_size)]
         self._size = len(self._idx)
         random.shuffle(self._idx)
         train_num = int(self._size * 0.9)
         self._train_idx = self._idx[:train_num]
         self._val_idx = self._idx[train_num:]
-        logger.info('train num = %s, valid num = %s', len(self._train_idx), len(self._val_idx))
+        logger.info('train batch num = %s, valid batch num = %s', len(self._train_idx), len(self._val_idx))
         self._train_count = 0
         self._valid_count = 0
 
     def next(self):
+        self._train_count += 1
         if self._train_count % len(self._train_idx) == 0:
-            self._train_count += 1
             raise StopIteration
         self._train_count += 1
         start, end = random.choice(self._train_idx)
