@@ -139,6 +139,7 @@ class DataIter:
     def next(self):
         self._train_count += 1
         if self._train_count % len(self._train_idx) == 0:
+            self.reset()
             raise StopIteration
         self._train_count += 1
         start, end = random.choice(self._train_idx)

@@ -139,14 +139,15 @@ def get_simple_data(csv_file, pre_num=20, after_num=1, target_idx=3):
     return X, Y
 
 
-def get_data_ma_smooth(csv_file, pre_num=20, after_num=1, ma_period=2, target_idx=3):
+def get_data_ma_smooth(csv_file, pre_num=20, after_num=1, ma_period=5, target_idx=3):
     """
     读入分钟/日线, 不同的样本数据长度一样
     """
     rb = pd.read_csv(csv_file, index_col=0)
     rb.index = pd.DatetimeIndex(rb.index)
-    target = rb.iloc[:, target_idx].copy()
-    target = target.rolling(ma_period).mean()
+    rb = rb.rolling(ma_period).mean()
+    rb = rb.dropna()
+    target = rb.iloc[:, target_idx]
     X, Y = [], []
     for i in range(pre_num, rb.shape[0] - after_num):
         start, end = i - pre_num, i
