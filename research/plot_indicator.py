@@ -222,9 +222,10 @@ def plot_aroon(day_csv, period=20, remote=False):
 
 
 if __name__ == '__main__':
-    DAY_DATA = '/home/daiab/machine_disk/code/quantum/csv_data/RB_1day.csv'
+    DAY_DATA = 'D:\quantum\csv_data\RB_1day.csv'
     # plot_data_period(DAY_DATA, "EMA")
     # plot_aroon(DAY_DATA, 20)
     plot_bollinger_bands(DAY_DATA, 2.0, 20)
+    plot_macd(DAY_DATA, 2, 20)
     # plot_macd(DAY_DATA, 2, 10)
     # plot_close_high_low_period(DAY_DATA, 'A/D Line', 20)

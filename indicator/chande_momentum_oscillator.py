@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 import numpy as np
 import warnings
-from pyti import catch_errors
+from indicator import catch_errors
 from six.moves import range
 
 

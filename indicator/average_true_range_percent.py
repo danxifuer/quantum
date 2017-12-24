@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 import numpy as np
-from pyti import catch_errors
-from pyti.average_true_range import (
+from indicator import catch_errors
+from indicator.average_true_range import (
     average_true_range as atr
     )
 

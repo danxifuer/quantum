@@ -1,6 +1,6 @@
 from __future__ import absolute_import
-from pyti import catch_errors
-from pyti.typical_price import typical_price as tp
+from indicator import catch_errors
+from indicator.typical_price import typical_price as tp
 
 
 def money_flow(close_data, high_data, low_data, volume):

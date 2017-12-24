@@ -1,8 +1,8 @@
 from __future__ import absolute_import
 import numpy as np
-from pyti import catch_errors
-from pyti.function_helper import fill_for_noncomputable_vals
-from pyti.true_range import true_range
+from indicator import catch_errors
+from indicator.function_helper import fill_for_noncomputable_vals
+from indicator.true_range import true_range
 from six.moves import range
 
 

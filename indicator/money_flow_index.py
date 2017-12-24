@@ -1,10 +1,10 @@
 from __future__ import absolute_import
 import numpy as np
 import warnings
-from pyti import catch_errors
-from pyti.function_helper import fill_for_noncomputable_vals
-from pyti.typical_price import typical_price
-from pyti.money_flow import money_flow
+from indicator import catch_errors
+from indicator.function_helper import fill_for_noncomputable_vals
+from indicator.typical_price import typical_price
+from indicator.money_flow import money_flow
 from six.moves import range
 
 

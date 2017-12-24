@@ -1,10 +1,10 @@
 from __future__ import absolute_import
 import numpy as np
-from pyti import catch_errors
-from pyti.smoothed_moving_average import (
+from indicator import catch_errors
+from indicator.smoothed_moving_average import (
     smoothed_moving_average as smma
     )
-from pyti.average_true_range import (
+from indicator.average_true_range import (
     average_true_range as atr
     )
 from six.moves import range

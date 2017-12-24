@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 import numpy as np
-from pyti.true_range import true_range
+from indicator.true_range import true_range
 from six.moves import range
 
 

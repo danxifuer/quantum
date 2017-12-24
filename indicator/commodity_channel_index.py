@@ -1,8 +1,8 @@
 from __future__ import absolute_import
 import numpy as np
-from pyti import catch_errors
-from pyti.typical_price import typical_price
-from pyti.simple_moving_average import (
+from indicator import catch_errors
+from indicator.typical_price import typical_price
+from indicator.simple_moving_average import (
     simple_moving_average as sma
     )
 

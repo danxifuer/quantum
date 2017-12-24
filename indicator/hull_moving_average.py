@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 import numpy as np
-from pyti import catch_errors
-from pyti.weighted_moving_average import (
+from indicator import catch_errors
+from indicator.weighted_moving_average import (
     weighted_moving_average as wma
     )
 

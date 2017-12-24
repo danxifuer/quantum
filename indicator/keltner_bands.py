@@ -1,10 +1,10 @@
 from __future__ import absolute_import
 import numpy as np
-from pyti import catch_errors
-from pyti.simple_moving_average import (
+from indicator import catch_errors
+from indicator.simple_moving_average import (
     simple_moving_average as sma
     )
-from pyti.typical_price import typical_price
+from indicator.typical_price import typical_price
 
 
 def band_width(high_data, low_data, period):

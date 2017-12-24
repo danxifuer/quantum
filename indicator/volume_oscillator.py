@@ -1,6 +1,6 @@
 from __future__ import absolute_import
-from pyti import catch_errors
-from pyti.simple_moving_average import simple_moving_average as sma
+from indicator import catch_errors
+from indicator.simple_moving_average import simple_moving_average as sma
 
 
 def volume_oscillator(volume, short_period, long_period):
