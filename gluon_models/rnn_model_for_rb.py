@@ -131,7 +131,6 @@ class DataIter:
         self._valid_count = 0
 
     def reset(self):
-        random.shuffle(self._train_X)
         X_Y = list(zip(self._train_X, self._train_Y))
         random.shuffle(X_Y)
         self._train_X, self._train_Y = list(zip(*X_Y))
