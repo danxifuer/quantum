@@ -41,6 +41,11 @@ RESTORE_PATH = './model_save/%s.params' % MODEL_NAME
 # infer
 INFER_SIZE = 10
 
+constant_vars = tuple(vars().items())
+for k, v in constant_vars:
+    if not k.startswith('__') and k.isupper():
+        logger.info('%s: %s', k, v)
+
 
 class RNNClsModel(gluon.Block):
     def __init__(self, mode,
@@ -122,11 +127,16 @@ class DataIter:
         random.shuffle(self._idx)
         train_num = int(self._size * 0.9)
         self._train_idx = self._idx[:train_num]
-        self._val_idx = self._idx[train_model:]
+        self._val_idx = self._idx[train_num:]
         logger.info('train num = %s, valid num = %s', len(self._train_idx), len(self._val_idx))
+        self._train_count = 0
         self._valid_count = 0
 
     def next(self):
+        if self._train_count % len(self._train_idx):
+            self._train_count += 1
+            raise StopIteration
+        self._train_count += 1
         start, end = random.choice(self._train_idx)
         data_batch = self._X[start: end]
         label_batch = self._Y[start: end]
@@ -169,8 +179,13 @@ class TrainModel:
             hidden = self.model.begin_state(func=mx.nd.zeros, batch_size=BATCH_SIZE, ctx=self.ctx)
             epoch_loss = []
             epoch_acc = []
-            for i in range(ITER_NUM_EPCOH):
-                data, target = self.iterator.next()
+            iter_num = -1
+            while True:
+                iter_num += 1
+                try:
+                    data, target = self.iterator.next()
+                except StopIteration:
+                    break
                 data = mx.nd.array(data, self.ctx)
                 target = mx.nd.array(target, self.ctx)
                 hidden = detach(hidden)
@@ -188,11 +203,11 @@ class TrainModel:
                 total_loss += mx.nd.sum(L).asscalar()
                 total_acc += mx.nd.sum(mx.nd.equal(mx.nd.argmax(output, axis=1), target)).asscalar()
 
-                if i % LOG_INTERVAL == 0:
+                if iter_num % LOG_INTERVAL == 0:
                     cur_loss = total_loss / BATCH_SIZE / LOG_INTERVAL
                     cur_acc = total_acc / BATCH_SIZE / LOG_INTERVAL
                     logger.info('%d # %d loss %.5f, ppl %.5f, lr %.5f, acc %.5f',
-                                epoch, i, cur_loss, math.exp(cur_loss), trainer._optimizer.lr, cur_acc)
+                                epoch, iter_num, cur_loss, math.exp(cur_loss), trainer._optimizer.lr, cur_acc)
                     epoch_loss.append(cur_loss)
                     epoch_acc.append(cur_acc)
                     total_loss = 0.0
