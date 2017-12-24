@@ -2,7 +2,7 @@ import logging
 import math
 import random
 import time
-
+import matplotlib.pyplot as plt
 import mxnet as mx
 import numpy as np
 import pandas as pd
@@ -111,73 +111,140 @@ def detach(hidden):
 
 class DataIter:
     def __init__(self, csv_file, seq_len, batch_size, predict_len):
-        self._X, self._Y = get_simple_data(csv_file, seq_len, predict_len)
+        # self._X, self._Y = get_simple_data(csv_file, seq_len, predict_len)
+        self._X, self._Y = get_data_ma_smooth(csv_file, seq_len, predict_len)
         self._X = [d.values for d in self._X]
         size = len(self._X)
         self._count = 0
         self._batch_size = batch_size
         self._idx = [(start, start + batch_size) for start in range(size - batch_size)]
         self._size = len(self._idx)
-        logger.info('all batch size == %s', self._size)
         random.shuffle(self._idx)
+        train_num = int(self._size * 0.9)
+        self._train_idx = self._idx[:train_num]
+        self._val_idx = self._idx[train_model:]
+        logger.info('train num = %s, valid num = %s', len(self._train_idx), len(self._val_idx))
+        self._valid_count = 0
 
     def next(self):
-        start, end = random.choice(self._idx)
+        start, end = random.choice(self._train_idx)
         data_batch = self._X[start: end]
         label_batch = self._Y[start: end]
         return data_batch, label_batch
 
+    def next_valid(self):
+        count = self._valid_count % len(self._val_idx)
+        self._valid_count += 1
+        if count == 0:
+            raise StopIteration
+        start, end = self._val_idx[count]
+        return self._X[start: end], self._Y[start: end]
 
-def train():
-    data_iter = DataIter(CSV_FILE, SEQ_LEN, BATCH_SIZE, predict_len=40)
-    print('read data over')
-    LOG_INTERVAL = 20
-    CLIP = 0.2
-    context = mx.gpu(0)
-    model = RNNClsModel(mode=CELL_TYPE, num_embed=INPUT_SIZE,
-                        num_hidden=HIDDEN_UNITS, seq_len=SEQ_LEN,
-                        num_layers=NUM_LAYERS, dropout=DROPOUT)
-    model.collect_params().initialize(mx.init.Xavier(), ctx=context)
-    # model.collect_params().load(RESTORE_PATH, context)
-    trainer = gluon.Trainer(model.collect_params(), 'sgd',
-                            {'learning_rate': LR,
-                             'momentum': 0.9,
-                             'wd': 0.0})
-    loss = gluon.loss.SoftmaxCrossEntropyLoss()
-    lr_decay = LRDecay(LR, END_LR, 0.6, DECAY_STEP)
-    for epoch in range(EPOCH):
+
+class TrainModel:
+    def __init__(self):
+        self.iterator = DataIter(CSV_FILE, SEQ_LEN, BATCH_SIZE, predict_len=40)
+        self.ctx = mx.gpu(0)
+        print('read data over')
+        self.model = RNNClsModel(mode=CELL_TYPE, num_embed=INPUT_SIZE,
+                                 num_hidden=HIDDEN_UNITS, seq_len=SEQ_LEN,
+                                 num_layers=NUM_LAYERS, dropout=DROPOUT)
+        self.loss = gluon.loss.SoftmaxCrossEntropyLoss()
+        self.train_record = []
+        self.val_record = []
+
+    def train(self):
+        LOG_INTERVAL = 20
+        CLIP = 0.2
+        self.model.collect_params().initialize(mx.init.Xavier(), ctx=self.ctx)
+        # model.collect_params().load(RESTORE_PATH, context)
+        trainer = gluon.Trainer(self.model.collect_params(), 'sgd',
+                                {'learning_rate': LR,
+                                 'momentum': 0.9,
+                                 'wd': 0.0})
+        lr_decay = LRDecay(LR, END_LR, 0.6, DECAY_STEP)
+        for epoch in range(EPOCH):
+            total_loss = 0.0
+            total_acc = 0.0
+            hidden = self.model.begin_state(func=mx.nd.zeros, batch_size=BATCH_SIZE, ctx=self.ctx)
+            epoch_loss = []
+            epoch_acc = []
+            for i in range(ITER_NUM_EPCOH):
+                data, target = self.iterator.next()
+                data = mx.nd.array(data, self.ctx)
+                target = mx.nd.array(target, self.ctx)
+                hidden = detach(hidden)
+                with autograd.record():
+                    output, hidden = self.model(data, hidden)
+                    L = self.loss(output, target)
+                    L.backward()
+
+                grads = [i.grad(self.ctx) for i in self.model.collect_params().values()]
+                # Here gradient is for the whole batch.
+                # So we multiply max_norm by batch_size and bptt size to balance it.
+                gluon.utils.clip_global_norm(grads, CLIP * BATCH_SIZE)
+
+                trainer.step(BATCH_SIZE)
+                total_loss += mx.nd.sum(L).asscalar()
+                total_acc += mx.nd.sum(mx.nd.equal(mx.nd.argmax(output, axis=1), target)).asscalar()
+
+                if i % LOG_INTERVAL == 0:
+                    cur_loss = total_loss / BATCH_SIZE / LOG_INTERVAL
+                    cur_acc = total_acc / BATCH_SIZE / LOG_INTERVAL
+                    logger.info('%d # %d loss %.5f, ppl %.5f, lr %.5f, acc %.5f',
+                                epoch, i, cur_loss, math.exp(cur_loss), trainer._optimizer.lr, cur_acc)
+                    epoch_loss.append(cur_loss)
+                    epoch_acc.append(cur_acc)
+                    total_loss = 0.0
+                    total_acc = 0.0
+                trainer._optimizer.lr = lr_decay.lr
+            self.model.collect_params().save(RESTORE_PATH)
+            self.train_record.append((sum(epoch_loss) / len(epoch_loss),
+                                      sum(epoch_acc) / len(epoch_acc)))
+            self.valid()
+
+    def valid(self):
+        hidden = self.model.begin_state(func=mx.nd.zeros, batch_size=BATCH_SIZE, ctx=self.ctx)
+        logger.info('start to valid')
         total_loss = 0.0
         total_acc = 0.0
-        hidden = model.begin_state(func=mx.nd.zeros, batch_size=BATCH_SIZE, ctx=context)
-        for i in range(ITER_NUM_EPCOH):
-            data, target = data_iter.next()
-            data = mx.nd.array(data, context)
-            target = mx.nd.array(target, context)
-            hidden = detach(hidden)
-            with autograd.record():
-                output, hidden = model(data, hidden)
-                L = loss(output, target)
-                L.backward()
+        count = 0
+        try:
+            while True:
+                data, target = self.iterator.next_valid()
+                data = mx.nd.array(data, self.context)
+                target = mx.nd.array(target, self.context)
+                target = mx.nd.reshape(target, shape=(-1,))
+                output, _ = self.model(data, hidden)
+                L = self.loss(output, target)
+                total_loss += mx.nd.sum(L).asscalar()
+                total_acc += mx.nd.sum(mx.nd.equal(mx.nd.argmax(output, axis=1), target)).asscalar()
+                count += BATCH_SIZE
+        except StopIteration:
+            cur_loss = total_loss / count / PREDICT_LEN
+            cur_acc = total_acc / count / PREDICT_LEN
+            logger.info('valid: loss %.5f, ppl %.5f, acc %.5f',
+                        cur_loss, math.exp(cur_loss), cur_acc)
+            self.val_record.append((cur_loss, cur_acc))
 
-            grads = [i.grad(context) for i in model.collect_params().values()]
-            # Here gradient is for the whole batch.
-            # So we multiply max_norm by batch_size and bptt size to balance it.
-            gluon.utils.clip_global_norm(grads, CLIP * BATCH_SIZE)
+    def plot(self):
+        train = np.array(self.train_record)
+        val = np.array(self.val_record)
+        x = np.arange(0, train.shape[0])
 
-            trainer.step(BATCH_SIZE)
-            total_loss += mx.nd.sum(L).asscalar()
-            total_acc += mx.nd.sum(mx.nd.equal(mx.nd.argmax(output, axis=1), target)).asscalar()
+        fig, axes = plt.subplots(nrows=2, figsize=(18, 9))
+        ax = axes[0]
+        ax.plot(x, train[:, 0], 'o-')
+        ax.plot(x, val[:, 0], '*-')
+        ax.set_title("loss")
 
-            if i % LOG_INTERVAL == 0:
-                cur_loss = total_loss / BATCH_SIZE / LOG_INTERVAL
-                cur_acc = total_acc / BATCH_SIZE / LOG_INTERVAL
-                logger.info('%d # %d loss %.5f, ppl %.5f, lr %.5f, acc %.5f',
-                            epoch, i, cur_loss, math.exp(cur_loss), trainer._optimizer.lr, cur_acc)
-                total_loss = 0.0
-                total_acc = 0.0
-            trainer._optimizer.lr = lr_decay.lr
-        model.collect_params().save(RESTORE_PATH)
+        ax = axes[1]
+        ax.plot(x, train[:, 1], 'o-')
+        ax.plot(x, val[:, 1], '*-')
+        ax.set_title("acc")
+        plt.savefig('train_val.svg', format='svg', dpi=800)
 
 
 if __name__ == '__main__':
-    train()
+    train_model = TrainModel()
+    train_model.train()
