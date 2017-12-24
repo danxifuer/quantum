@@ -231,8 +231,8 @@ class TrainModel:
         try:
             while True:
                 data, target = self.iterator.next_valid()
-                data = mx.nd.array(data, self.context)
-                target = mx.nd.array(target, self.context)
+                data = mx.nd.array(data, self.ctx)
+                target = mx.nd.array(target, self.ctx)
                 target = mx.nd.reshape(target, shape=(-1,))
                 output, _ = self.model(data, hidden)
                 L = self.loss(output, target)
