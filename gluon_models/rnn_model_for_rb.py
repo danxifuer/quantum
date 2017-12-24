@@ -16,7 +16,7 @@ logging.basicConfig(level=logging.DEBUG,
                     filemode='w')
 logger = logging.getLogger(__name__)
 
-BATCH_SIZE = 128
+BATCH_SIZE = 256
 SEQ_LEN = 500
 PREDICT_LEN = 1
 NUM_LAYERS = 4
@@ -140,7 +140,6 @@ class DataIter:
         if self._train_count % len(self._train_idx) == 0:
             self.reset()
             raise StopIteration
-        self._train_count += 1
         start, end = random.choice(self._train_idx)
         data_batch = self._X[start: end]
         label_batch = self._Y[start: end]
@@ -221,6 +220,7 @@ class TrainModel:
             self.train_record.append((sum(epoch_loss) / len(epoch_loss),
                                       sum(epoch_acc) / len(epoch_acc)))
             self.valid()
+            self.plot()
 
     def valid(self):
         hidden = self.model.begin_state(func=mx.nd.zeros, batch_size=BATCH_SIZE, ctx=self.ctx)
