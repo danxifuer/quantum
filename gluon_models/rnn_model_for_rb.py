@@ -7,7 +7,6 @@ import numpy as np
 from mxnet import autograd
 from mxnet import gluon
 from mxnet.gluon import nn, rnn
-
 from csv_data.read_csv_data import get_simple_data, get_data_ma_smooth
 
 MODEL_NAME = __name__
@@ -116,18 +115,26 @@ class DataIter:
         # self._X, self._Y = get_simple_data(csv_file, seq_len, predict_len)
         self._X, self._Y = get_data_ma_smooth(csv_file, seq_len, predict_len)
         self._X = [d.values for d in self._X]
-        size = len(self._X)
-        self._count = 0
-        self._batch_size = batch_size
-        self._idx = [(start, start + batch_size) for start in range(0, size - batch_size, batch_size)]
-        self._size = len(self._idx)
-        random.shuffle(self._idx)
-        train_num = int(self._size * 0.9)
-        self._train_idx = self._idx[:train_num]
-        self._val_idx = self._idx[train_num:]
+        X_Y = list(zip(self._X, self._Y))
+        random.shuffle(X_Y)
+        self._X, self._Y = list(zip(*X_Y))
+        train_num = int(len(self._X) * 0.9)
+        self._train_X = self._X[:train_num]
+        self._val_X = self._X[train_num:]
+        self._train_Y = self._Y[:train_num]
+        self._val_Y = self._Y[train_num:]
+
+        self._train_idx = [(start, start + batch_size) for start in range(0, len(self._train_X) - batch_size, batch_size)]
+        self._val_idx = [(start, start + batch_size) for start in range(0, len(self._val_X) - batch_size, batch_size)]
         logger.info('train batch num = %s, valid batch num = %s', len(self._train_idx), len(self._val_idx))
         self._train_count = 0
         self._valid_count = 0
+
+    def reset(self):
+        random.shuffle(self._train_X)
+        X_Y = list(zip(self._train_X, self._train_Y))
+        random.shuffle(X_Y)
+        self._train_X, self._train_Y = list(zip(*X_Y))
 
     def next(self):
         self._train_count += 1
