@@ -1,11 +1,9 @@
 import logging
 import math
 import random
-import time
 import matplotlib.pyplot as plt
 import mxnet as mx
 import numpy as np
-import pandas as pd
 from mxnet import autograd
 from mxnet import gluon
 from mxnet.gluon import nn, rnn
@@ -38,8 +36,7 @@ INPUT_SIZE = 5
 CELL_TYPE = 'rnn_tanh'
 CSV_FILE = '/home/daiab/machine_disk/code/quantum/csv_data/RB_min.csv'
 RESTORE_PATH = './model_save/%s.params' % MODEL_NAME
-# infer
-INFER_SIZE = 10
+
 
 constant_vars = tuple(vars().items())
 for k, v in constant_vars:
@@ -133,7 +130,7 @@ class DataIter:
         self._valid_count = 0
 
     def next(self):
-        if self._train_count % len(self._train_idx):
+        if self._train_count % len(self._train_idx) == 0:
             self._train_count += 1
             raise StopIteration
         self._train_count += 1
@@ -143,8 +140,8 @@ class DataIter:
         return data_batch, label_batch
 
     def next_valid(self):
-        count = self._valid_count % len(self._val_idx)
         self._valid_count += 1
+        count = self._valid_count % len(self._val_idx)
         if count == 0:
             raise StopIteration
         start, end = self._val_idx[count]
