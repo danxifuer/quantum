@@ -167,7 +167,7 @@ batch_state_next = nd.empty((opt.batch_size, opt.frame_len, opt.image_size, opt.
 for i in range(opt.num_episode):
     cum_clipped_reward = 0
     cum_reward = 0
-    next_frame = env.reset()
+    next_frame = env._reset()
     state = preprocess(next_frame, initial_state=True)
     t = 0.
     done = False

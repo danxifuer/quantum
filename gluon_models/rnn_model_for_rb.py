@@ -3,7 +3,10 @@ import math
 import random
 import matplotlib.pyplot as plt
 import mxnet as mx
+import pandas as pd
 import numpy as np
+import time
+from queue import Queue
 from mxnet import autograd
 from mxnet import gluon
 from mxnet.gluon import nn, rnn
@@ -18,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 BATCH_SIZE = 256
 SEQ_LEN = 500
-PREDICT_LEN = 1
+PREDICT_LEN = 40
 NUM_LAYERS = 4
 HIDDEN_UNITS = 128
 NUM_CLASSES = 2
@@ -44,12 +47,8 @@ for k, v in constant_vars:
 
 
 class RNNClsModel(gluon.Block):
-    def __init__(self, mode,
-                 num_embed,
-                 num_hidden,
-                 seq_len, num_layers,
-                 dropout=0.0,
-                 **kwargs):
+    def __init__(self, mode, num_embed, num_hidden, seq_len,
+                 num_layers, dropout=0.0, **kwargs):
         super(RNNClsModel, self).__init__(**kwargs)
         with self.name_scope():
             self.drop = nn.Dropout(dropout)
@@ -71,13 +70,16 @@ class RNNClsModel(gluon.Block):
                 raise ValueError("Invalid mode %s. Options are rnn_relu, "
                                  "rnn_tanh, lstm, and gru" % mode)
 
-            self.fc = nn.Dense(NUM_CLASSES, in_units=num_hidden * seq_len)
-            self.num_hidden = num_hidden
             self.seq_len = seq_len
+            if isinstance(seq_len, (list, tuple)):
+                self.seq_len = min(seq_len)
+            self.fc = nn.Dense(NUM_CLASSES, in_units=num_hidden * self.seq_len)
+            self.num_hidden = num_hidden
 
     def forward(self, inputs, hidden):
         output, hidden = self.rnn(inputs, hidden)
         output = self.drop(output)
+        # output = output[:, output.shape[1] - 1, :]
         decoded = self.fc(output.reshape((-1, self.num_hidden * self.seq_len)))
         return decoded, hidden
 
@@ -130,7 +132,7 @@ class DataIter:
         self._train_count = 0
         self._valid_count = 0
 
-    def reset(self):
+    def _reset(self):
         X_Y = list(zip(self._train_X, self._train_Y))
         random.shuffle(X_Y)
         self._train_X, self._train_Y = list(zip(*X_Y))
@@ -138,7 +140,7 @@ class DataIter:
     def next(self):
         self._train_count += 1
         if self._train_count % len(self._train_idx) == 0:
-            self.reset()
+            self._reset()
             raise StopIteration
         start, end = random.choice(self._train_idx)
         data_batch = self._X[start: end]
@@ -154,17 +156,125 @@ class DataIter:
         return self._X[start: end], self._Y[start: end]
 
 
+class VarSeqLenDataIter:
+    def __init__(self, csv_file, seq_len_low, seq_len_up, batch_size, predict_len):
+        self._seq_len_low = seq_len_low
+        self._seq_len_up = seq_len_up
+        self._batch_size = batch_size
+        self._predict_len = predict_len
+        # self._csv_file = csv_file
+        self._rb = self._read_csv(csv_file, 5)
+        length = self._rb
+        idx = list(range(seq_len_up, length - predict_len))
+        random.shuffle(idx)
+        self._idx_for_train = idx[:int(length * 0.9)]
+        self._idx_for_valid = idx[int(length * 0.9):]
+        self._seq_len_range = list(range(self._seq_len_low, self._seq_len_up))
+        self._valid_count = 0
+        self._valid_seq_count = 0
+        self._train_count = 0
+        logger.info('train batch num = %s, valid batch num = %s',
+                    len(self._idx_for_train) * len(self._seq_len_range),
+                    len(self._idx_for_valid) * len(self._seq_len_range)
+                    )
+        # self._data_queue = Queue()
+
+    '''
+    def _data_pipe(self):
+        period_list = list(range(self._seq_len_low, self._seq_len_up))
+        while True:
+            if self._data_queue.qsize() > 1000:
+                time.sleep(0.5)
+                continue
+            p = random.choice(period_list)
+            batch_data, batch_target = self._read_batch(p, self._predict_len, self._batch_size)
+            batch_data = [d.values for d in batch_data]
+            self._data_queue.put((batch_data, batch_target))
+    '''
+
+    @staticmethod
+    def _read_csv(csv_file, ma_period):
+        rb = pd.read_csv(csv_file, index_col=0)
+        # rb.index = pd.DatetimeIndex(rb.index)
+        rb = rb.rolling(ma_period).mean()
+        rb = rb.dropna()
+        return rb
+
+    def _read_train_batch(self, seq_len):
+        batch_data = []
+        batch_target = []
+        idx_set = set()
+        while len(batch_data) < self._batch_size:
+            i = random.choice(self._idx_for_train)
+            while i in idx_set:
+                i = random.choice(self._idx_for_train)
+            idx_set.add(i)
+            start, end = i - seq_len, i
+            data = self._rb.iloc[start: end]
+            target = self._rb['close']
+            data = (data - data.mean()) / data.std()
+            if not np.all(np.isfinite(data)):
+                print('data nan')
+                continue
+            y = int(target.iloc[i + self._predict_len - 1] >= target.iloc[i - 1])
+            batch_data.append(data)
+            batch_target.append(y)
+        return batch_data, batch_target
+
+    def _read_valid_batch(self, seq_len):
+        self._valid_count += 1
+        idx = self._valid_count % len(self._idx_for_valid)
+        if idx == 0:
+            raise StopIteration
+        batch_data = []
+        batch_target = []
+        while len(batch_data) < self._batch_size:
+            i = self._idx_for_valid[idx]
+            start, end = i - seq_len, i
+            data = self._rb.iloc[start: end]
+            target = self._rb['close']
+            data = (data - data.mean()) / data.std()
+            if not np.all(np.isfinite(data)):
+                print('data nan')
+                continue
+            y = int(target.iloc[i + self._predict_len - 1] >= target.iloc[i - 1])
+            batch_data.append(data)
+            batch_target.append(y)
+        return batch_data, batch_target
+
+    def next(self):
+        self._train_count += 1
+        if self._train_count % (len(self._idx_for_train) * len(self._seq_len_range)) == 0:
+            raise StopIteration
+        seq_len = random.choice(self._seq_len_range)
+        return self._read_train_batch(seq_len)
+
+    def next_valid(self):
+        self._valid_seq_count += 1
+        seq_len_idx = self._valid_seq_count % len(self._seq_len_range)
+        if seq_len_idx == 0:
+            raise StopIteration
+        try:
+            seq_len = self._seq_len_range[seq_len_idx]
+            return self._read_valid_batch(seq_len)
+        except StopIteration:
+            return self.next_valid()
+
+
 class TrainModel:
     def __init__(self):
-        self.iterator = DataIter(CSV_FILE, SEQ_LEN, BATCH_SIZE, predict_len=40)
         self.ctx = mx.gpu(0)
-        print('read data over')
+        # self.iterator = DataIter(CSV_FILE, SEQ_LEN, BATCH_SIZE, predict_len=PREDICT_LEN)
+        # seq_len = SEQ_LEN
+        self.iterator = VarSeqLenDataIter(CSV_FILE, SEQ_LEN, SEQ_LEN+100, BATCH_SIZE, predict_len=PREDICT_LEN)
+        seq_len = (SEQ_LEN, SEQ_LEN+100)
         self.model = RNNClsModel(mode=CELL_TYPE, num_embed=INPUT_SIZE,
-                                 num_hidden=HIDDEN_UNITS, seq_len=SEQ_LEN,
+                                 num_hidden=HIDDEN_UNITS, seq_len=seq_len,
                                  num_layers=NUM_LAYERS, dropout=DROPOUT)
         self.loss = gluon.loss.SoftmaxCrossEntropyLoss()
         self.train_record = []
         self.val_record = []
+        logger.info('read data and model init over')
 
     def train(self):
         LOG_INTERVAL = 20
@@ -240,8 +350,8 @@ class TrainModel:
                 total_acc += mx.nd.sum(mx.nd.equal(mx.nd.argmax(output, axis=1), target)).asscalar()
                 count += BATCH_SIZE
         except StopIteration:
-            cur_loss = total_loss / count / PREDICT_LEN
-            cur_acc = total_acc / count / PREDICT_LEN
+            cur_loss = total_loss / count
+            cur_acc = total_acc / count
             logger.info('valid: loss %.5f, ppl %.5f, acc %.5f',
                         cur_loss, math.exp(cur_loss), cur_acc)
             self.val_record.append((cur_loss, cur_acc))
