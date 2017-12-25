@@ -10,6 +10,7 @@ from queue import Queue
 from mxnet import autograd
 from mxnet import gluon
 from mxnet.gluon import nn, rnn
+from threading import Thread
 from csv_data.read_csv_data import get_simple_data, get_data_ma_smooth
 
 MODEL_NAME = __name__
@@ -79,7 +80,9 @@ class RNNClsModel(gluon.Block):
     def forward(self, inputs, hidden):
         output, hidden = self.rnn(inputs, hidden)
         output = self.drop(output)
-        # output = output[:, output.shape[1] - 1, :]
+        size = output.shape[1]
+        if size != self.seq_len:
+            output = output[:, size - self.seq_len: size, :]
         decoded = self.fc(output.reshape((-1, self.num_hidden * self.seq_len)))
         return decoded, hidden
 
@@ -164,7 +167,7 @@ class VarSeqLenDataIter:
         self._predict_len = predict_len
         # self._csv_file = csv_file
         self._rb = self._read_csv(csv_file, 5)
-        length = self._rb
+        length = self._rb.shape[0]
         idx = list(range(seq_len_up, length - predict_len))
         random.shuffle(idx)
         self._idx_for_train = idx[:int(length * 0.9)]
@@ -173,24 +176,25 @@ class VarSeqLenDataIter:
         self._valid_count = 0
         self._valid_seq_count = 0
         self._train_count = 0
+        self._iter_per_epoch = int(len(self._idx_for_train) * len(self._seq_len_range) / batch_size)
+        self._valid_iter_num = int(len(self._idx_for_valid) / batch_size)
         logger.info('train batch num = %s, valid batch num = %s',
-                    len(self._idx_for_train) * len(self._seq_len_range),
-                    len(self._idx_for_valid) * len(self._seq_len_range)
+                    self._iter_per_epoch,
+                    self._valid_iter_num * len(self._seq_len_range)
                     )
-        # self._data_queue = Queue()
+        self._data_queue = Queue()
+        th = Thread(target=self._data_pipe)
+        th.daemon = True
+        th.start()
 
-    '''
     def _data_pipe(self):
-        period_list = list(range(self._seq_len_low, self._seq_len_up))
         while True:
-            if self._data_queue.qsize() > 1000:
-                time.sleep(0.5)
+            if self._data_queue.qsize() > 2000:
+                time.sleep(0.2)
                 continue
-            p = random.choice(period_list)
-            batch_data, batch_target = self._read_batch(p, self._predict_len, self._batch_size)
-            batch_data = [d.values for d in batch_data]
+            seq_len = random.choice(self._seq_len_range)
+            batch_data, batch_target = self._read_train_batch(seq_len)
             self._data_queue.put((batch_data, batch_target))
-    '''
 
     @staticmethod
     def _read_csv(csv_file, ma_period):
@@ -217,13 +221,13 @@ class VarSeqLenDataIter:
                 print('data nan')
                 continue
             y = int(target.iloc[i + self._predict_len - 1] >= target.iloc[i - 1])
-            batch_data.append(data)
+            batch_data.append(data.values)
             batch_target.append(y)
         return batch_data, batch_target
 
     def _read_valid_batch(self, seq_len):
         self._valid_count += 1
-        idx = self._valid_count % len(self._idx_for_valid)
+        idx = self._valid_count % self._valid_iter_num
         if idx == 0:
             raise StopIteration
         batch_data = []
@@ -235,19 +239,20 @@ class VarSeqLenDataIter:
             target = self._rb['close']
             data = (data - data.mean()) / data.std()
             if not np.all(np.isfinite(data)):
-                print('data nan')
+                logger.error('data nan')
                 continue
             y = int(target.iloc[i + self._predict_len - 1] >= target.iloc[i - 1])
-            batch_data.append(data)
+            batch_data.append(data.values)
             batch_target.append(y)
         return batch_data, batch_target
 
     def next(self):
         self._train_count += 1
-        if self._train_count % (len(self._idx_for_train) * len(self._seq_len_range)) == 0:
+        if self._train_count % self._iter_per_epoch == 0:
             raise StopIteration
-        seq_len = random.choice(self._seq_len_range)
-        return self._read_train_batch(seq_len)
+        # seq_len = random.choice(self._seq_len_range)
+        # return self._read_train_batch(seq_len)
+        return self._data_queue.get(timeout=10)
 
     def next_valid(self):
         self._valid_seq_count += 1
@@ -267,7 +272,7 @@ class TrainModel:
         # self.iterator = DataIter(CSV_FILE, SEQ_LEN, BATCH_SIZE, predict_len=PREDICT_LEN)
         # seq_len = SEQ_LEN
         self.iterator = VarSeqLenDataIter(CSV_FILE, SEQ_LEN, SEQ_LEN+100, BATCH_SIZE, predict_len=PREDICT_LEN)
-        seq_len = (SEQ_LEN, SEQ_LEN+100)
+        seq_len = (SEQ_LEN, SEQ_LEN+20)
         self.model = RNNClsModel(mode=CELL_TYPE, num_embed=INPUT_SIZE,
                                  num_hidden=HIDDEN_UNITS, seq_len=seq_len,
                                  num_layers=NUM_LAYERS, dropout=DROPOUT)
