@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 BATCH_SIZE = 256
 SEQ_LEN = 500
+SEQ_DELTA = 100
 PREDICT_LEN = 40
 NUM_LAYERS = 4
 HIDDEN_UNITS = 128
@@ -36,8 +37,10 @@ DECAY_STEP = ITER_NUM_EPCOH * EPOCH
 LR = 0.04
 END_LR = 0.0002
 INPUT_SIZE = 5
+MA_PERIOD = 5
 CELL_TYPE = 'rnn_tanh'
 CSV_FILE = '/home/daiab/machine_disk/code/quantum/csv_data/RB_min.csv'
+INFER_CSV_FILE = '/home/daiab/machine_disk/code/quantum/csv_data/RB_min_infer.csv'
 RESTORE_PATH = './model_save/%s.params' % MODEL_NAME
 
 
@@ -118,7 +121,8 @@ def detach(hidden):
 class DataIter:
     def __init__(self, csv_file, seq_len, batch_size, predict_len):
         # self._X, self._Y = get_simple_data(csv_file, seq_len, predict_len)
-        self._X, self._Y = get_data_ma_smooth(csv_file, seq_len, predict_len)
+        self._X, self._Y = get_data_ma_smooth(csv_file, seq_len,
+                                              predict_len, MA_PERIOD)
         self._X = [d.values for d in self._X]
         X_Y = list(zip(self._X, self._Y))
         random.shuffle(X_Y)
@@ -157,6 +161,25 @@ class DataIter:
             raise StopIteration
         start, end = self._val_idx[count]
         return self._X[start: end], self._Y[start: end]
+
+
+class InferDataIter:
+    def __init__(self, csv_file, seq_len, batch_size, predict_len):
+        self._X, self._Y = get_data_ma_smooth(csv_file, seq_len,
+                                              predict_len, MA_PERIOD)
+        self._X = [d.values for d in self._X]
+        self._idx = [(start, start + batch_size) for start in range(0, len(self._X) - batch_size, batch_size)]
+        self._train_count = 0
+        logger.info('batch num = %s', len(self._idx))
+
+    def next(self):
+        if self._train_count >= len(self._idx):
+            raise StopIteration
+        start, end = self._idx[self._train_count]
+        self._train_count += 1
+        data_batch = self._X[start: end]
+        label_batch = self._Y[start: end]
+        return data_batch, label_batch
 
 
 class VarSeqLenDataIter:
@@ -271,11 +294,14 @@ class TrainModel:
         self.ctx = mx.gpu(0)
         # self.iterator = DataIter(CSV_FILE, SEQ_LEN, BATCH_SIZE, predict_len=PREDICT_LEN)
         # seq_len = SEQ_LEN
-        self.iterator = VarSeqLenDataIter(CSV_FILE, SEQ_LEN, SEQ_LEN+100, BATCH_SIZE, predict_len=PREDICT_LEN)
-        seq_len = (SEQ_LEN, SEQ_LEN+20)
+        self.iterator = VarSeqLenDataIter(CSV_FILE, SEQ_LEN,
+                                          SEQ_LEN+SEQ_DELTA, BATCH_SIZE,
+                                          predict_len=PREDICT_LEN)
+        seq_len = (SEQ_LEN, SEQ_LEN+SEQ_DELTA)
         self.model = RNNClsModel(mode=CELL_TYPE, num_embed=INPUT_SIZE,
                                  num_hidden=HIDDEN_UNITS, seq_len=seq_len,
-                                 num_layers=NUM_LAYERS, dropout=DROPOUT)
+                                 num_layers=
+                                 NUM_LAYERS, dropout=DROPOUT)
         self.loss = gluon.loss.SoftmaxCrossEntropyLoss()
         self.train_record = []
         self.val_record = []
@@ -379,6 +405,40 @@ class TrainModel:
         plt.savefig('train_val.svg', format='svg', dpi=800)
 
 
+class InferModel:
+    def __init__(self):
+        self.ctx = mx.gpu(0)
+        self.iterator = InferDataIter(INFER_CSV_FILE, SEQ_LEN + SEQ_DELTA,
+                                 BATCH_SIZE, predict_len=PREDICT_LEN)
+        self.model = RNNClsModel(mode=CELL_TYPE, num_embed=INPUT_SIZE,
+                                 num_hidden=HIDDEN_UNITS,
+                                 seq_len=SEQ_LEN,
+                                 num_layers=
+                                 NUM_LAYERS, dropout=0.0)
+        logger.info('read data and model init over')
+
+    def score(self):
+        hidden = self.model.begin_state(func=mx.nd.zeros, batch_size=BATCH_SIZE, ctx=self.ctx)
+        self.model.collect_params().load(RESTORE_PATH, self.ctx)
+        logger.info('start to valid')
+        total_acc = 0.0
+        count = 0
+        try:
+            while True:
+                data, target = self.iterator.next()
+                data = mx.nd.array(data, self.ctx)
+                target = mx.nd.array(target, self.ctx)
+                target = mx.nd.reshape(target, shape=(-1,))
+                output, _ = self.model(data, hidden)
+                total_acc += mx.nd.sum(mx.nd.equal(mx.nd.argmax(output, axis=1), target)).asscalar()
+                count += BATCH_SIZE
+        except StopIteration:
+            cur_acc = total_acc / count
+            logger.info('infer acc: %.5f', cur_acc)
+
+
 if __name__ == '__main__':
-    train_model = TrainModel()
-    train_model.train()
+    # train_model = TrainModel()
+    # train_model.train()
+    infer = InferModel()
+    infer.score()
