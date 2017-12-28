@@ -6,6 +6,7 @@ import mxnet as mx
 import pandas as pd
 import numpy as np
 import time
+import os
 from queue import Queue
 from mxnet import autograd
 from mxnet import gluon
@@ -41,7 +42,7 @@ MA_PERIOD = 5
 CELL_TYPE = 'rnn_tanh'
 CSV_FILE = '/home/daiab/machine_disk/code/quantum/csv_data/RB_min.csv'
 INFER_CSV_FILE = '/home/daiab/machine_disk/code/quantum/csv_data/RB_min_infer.csv'
-RESTORE_PATH = './model_save/%s.params' % MODEL_NAME
+RESTORE_PATH = './model_save/'
 
 
 constant_vars = tuple(vars().items())
@@ -101,12 +102,13 @@ class LRDecay:
         self.total_step = total_step
         self.power = power
 
-    @property
-    def lr(self):
+    def __call__(self, *args, **kwargs):
         self.cur_step += 1
         lr = (1 - self.cur_step / self.total_step) ** self.power * (self.base_lr - self.end_lr) + self.end_lr
         if lr < self.end_lr:
             return self.end_lr
+        if self.cur_step % 1000 == 0:
+            logger.info('Learning Rate == %s', lr)
         return lr
 
 
@@ -291,9 +293,7 @@ class VarSeqLenDataIter:
 
 class TrainModel:
     def __init__(self):
-        self.ctx = mx.gpu(0)
-        # self.iterator = DataIter(CSV_FILE, SEQ_LEN, BATCH_SIZE, predict_len=PREDICT_LEN)
-        # seq_len = SEQ_LEN
+        self.ctx = mx.gpu(1)
         self.iterator = VarSeqLenDataIter(CSV_FILE, SEQ_LEN,
                                           SEQ_LEN+SEQ_DELTA, BATCH_SIZE,
                                           predict_len=PREDICT_LEN)
@@ -312,18 +312,18 @@ class TrainModel:
         CLIP = 0.2
         self.model.collect_params().initialize(mx.init.Xavier(), ctx=self.ctx)
         # model.collect_params().load(RESTORE_PATH, context)
-        trainer = gluon.Trainer(self.model.collect_params(), 'sgd',
-                                {'learning_rate': LR,
-                                 'momentum': 0.9,
-                                 'wd': 0.0})
-        lr_decay = LRDecay(LR, END_LR, 0.6, DECAY_STEP)
+        lr_scheduler = LRDecay(LR, END_LR, 0.6, DECAY_STEP)
+        opt = mx.optimizer.SGD(learning_rate=LR, momentum=0.9,
+                               wd=0.0, lr_scheduler=lr_scheduler)
+        trainer = gluon.Trainer(self.model.collect_params(), opt)
+        # lr_decay = LRDecay(LR, END_LR, 0.6, DECAY_STEP)
+        iter_num = -1
         for epoch in range(EPOCH):
             total_loss = 0.0
             total_acc = 0.0
             hidden = self.model.begin_state(func=mx.nd.zeros, batch_size=BATCH_SIZE, ctx=self.ctx)
             epoch_loss = []
             epoch_acc = []
-            iter_num = -1
             while True:
                 iter_num += 1
                 try:
@@ -350,22 +350,34 @@ class TrainModel:
                 if iter_num % LOG_INTERVAL == 0:
                     cur_loss = total_loss / BATCH_SIZE / LOG_INTERVAL
                     cur_acc = total_acc / BATCH_SIZE / LOG_INTERVAL
-                    logger.info('%d # %d loss %.5f, ppl %.5f, lr %.5f, acc %.5f',
-                                epoch, iter_num, cur_loss, math.exp(cur_loss), trainer._optimizer.lr, cur_acc)
+                    logger.info('%d # %d loss %.5f, ppl %.5f, acc %.5f',
+                                epoch, iter_num, cur_loss, math.exp(cur_loss), cur_acc)
                     epoch_loss.append(cur_loss)
                     epoch_acc.append(cur_acc)
                     total_loss = 0.0
                     total_acc = 0.0
-                trainer._optimizer.lr = lr_decay.lr
-            self.model.collect_params().save(RESTORE_PATH)
+                # trainer._optimizer.lr = lr_decay.lr
+                if (iter_num + 1) % 1000 == 0:
+                    self.train_record.append((sum(epoch_loss) / len(epoch_loss),
+                                              sum(epoch_acc) / len(epoch_acc)))
+                    self.valid()
+                    self.plot()
+                if (iter_num + 1) % 2000 == 0:
+                    self.infer()
+                if (iter_num + 1) % 5000 == 0:
+                    file_name = os.path.join(RESTORE_PATH, 'model_%s.params' % iter_num)
+                    self.model.collect_params().save(file_name)
+                    logger.info('save model to %s', file_name)
             self.train_record.append((sum(epoch_loss) / len(epoch_loss),
                                       sum(epoch_acc) / len(epoch_acc)))
             self.valid()
             self.plot()
+        file_name = os.path.join(RESTORE_PATH, 'model_%s.params' % iter_num)
+        self.model.collect_params().save(file_name)
 
     def valid(self):
         hidden = self.model.begin_state(func=mx.nd.zeros, batch_size=BATCH_SIZE, ctx=self.ctx)
-        logger.info('start to valid')
+        logger.info('~~~~~~ start to valid ~~~~~~')
         total_loss = 0.0
         total_acc = 0.0
         count = 0
@@ -383,9 +395,29 @@ class TrainModel:
         except StopIteration:
             cur_loss = total_loss / count
             cur_acc = total_acc / count
-            logger.info('valid: loss %.5f, ppl %.5f, acc %.5f',
+            logger.info('~~~~~~ valid: loss %.5f, ppl %.5f, acc %.5f',
                         cur_loss, math.exp(cur_loss), cur_acc)
             self.val_record.append((cur_loss, cur_acc))
+
+    def infer(self):
+        iterator = InferDataIter(INFER_CSV_FILE, SEQ_LEN + SEQ_DELTA,
+                                      BATCH_SIZE, predict_len=PREDICT_LEN)
+        hidden = self.model.begin_state(func=mx.nd.zeros, batch_size=BATCH_SIZE, ctx=self.ctx)
+        logger.info('~~~~~~ start to infer ~~~~~~')
+        total_acc = 0.0
+        count = 0
+        try:
+            while True:
+                data, target = iterator.next()
+                data = mx.nd.array(data, self.ctx)
+                target = mx.nd.array(target, self.ctx)
+                target = mx.nd.reshape(target, shape=(-1,))
+                output, _ = self.model(data, hidden)
+                total_acc += mx.nd.sum(mx.nd.equal(mx.nd.argmax(output, axis=1), target)).asscalar()
+                count += BATCH_SIZE
+        except StopIteration:
+            cur_acc = total_acc / count
+            logger.info('~~~~~~ infer over acc: %s', cur_acc)
 
     def plot(self):
         train = np.array(self.train_record)
@@ -407,7 +439,7 @@ class TrainModel:
 
 class InferModel:
     def __init__(self):
-        self.ctx = mx.gpu(0)
+        self.ctx = mx.gpu(2)
         self.iterator = InferDataIter(INFER_CSV_FILE, SEQ_LEN + SEQ_DELTA,
                                  BATCH_SIZE, predict_len=PREDICT_LEN)
         self.model = RNNClsModel(mode=CELL_TYPE, num_embed=INPUT_SIZE,
@@ -417,10 +449,10 @@ class InferModel:
                                  NUM_LAYERS, dropout=0.0)
         logger.info('read data and model init over')
 
-    def score(self):
+    def score(self, model_path):
         hidden = self.model.begin_state(func=mx.nd.zeros, batch_size=BATCH_SIZE, ctx=self.ctx)
-        self.model.collect_params().load(RESTORE_PATH, self.ctx)
-        logger.info('start to valid')
+        self.model.collect_params().load(model_path, self.ctx)
+        logger.info('start to infer')
         total_acc = 0.0
         count = 0
         try:
@@ -434,11 +466,11 @@ class InferModel:
                 count += BATCH_SIZE
         except StopIteration:
             cur_acc = total_acc / count
-            logger.info('infer acc: %.5f', cur_acc)
+            logger.info('infer over acc: %s', cur_acc)
 
 
 if __name__ == '__main__':
     # train_model = TrainModel()
     # train_model.train()
     infer = InferModel()
-    infer.score()
+    infer.score('/home/daiab/machine_disk/code/quantum/gluon_models/model_save/model_19999.params')
