@@ -21,10 +21,10 @@ logging.basicConfig(level=logging.DEBUG,
                     filemode='w')
 logger = logging.getLogger(__name__)
 
-BATCH_SIZE = 256
+BATCH_SIZE = 180
 SEQ_LEN = 500
 SEQ_DELTA = 100
-PREDICT_LEN = 40
+PREDICT_LEN = 100
 NUM_LAYERS = 4
 HIDDEN_UNITS = 128
 NUM_CLASSES = 2
@@ -470,7 +470,7 @@ class InferModel:
 
 
 if __name__ == '__main__':
-    # train_model = TrainModel()
-    # train_model.train()
-    infer = InferModel()
-    infer.score('/home/daiab/machine_disk/code/quantum/gluon_models/model_save/model_19999.params')
+    train_model = TrainModel()
+    train_model.train()
+    # infer = InferModel()
+    # infer.score('/home/daiab/machine_disk/code/quantum/gluon_models/model_save/model_19999.params')
